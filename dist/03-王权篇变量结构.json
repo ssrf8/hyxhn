@@ -1,0 +1,17 @@
+{
+  "type": "script",
+  "enabled": true,
+  "name": "03-王权篇变量结构",
+  "id": "d7d4e49c-cab1-4de9-97f6-82a9e63799a2",
+  "content": "// ═══ 狐妖小红娘·王权篇 Schema v1.1.0 ═══\n// v1.1.0: 收敛为剧情、时间、地点、清瞳状态、好感度与心声六项状态。\nlet registerMvuSchema;\ntry {\n  ({ registerMvuSchema } = await import('https://cdn.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js'));\n} catch (primaryError) {\n  console.warn('[王权篇 Schema] 主镜像加载失败，尝试备用镜像。', primaryError);\n  ({ registerMvuSchema } = await import('https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js'));\n}\n\nconst STAGES = [\n  '00_序章_道门兵人',\n  '01_任务_蛛网疑影',\n  '02_初遇_笼中清瞳',\n  '03_相知_画中山河',\n  '04_决裂_出逃山庄',\n  '05_尾声_万水千山',\n];\n\nconst str = (fallback = '') => z.preprocess(\n  value => (value === undefined || value === null || value === '' ? fallback : String(value)),\n  z.string(),\n).prefault(fallback).catch(fallback);\n\nexport const Schema = z.object({\n  剧情: z.object({\n    当前阶段: z.enum(STAGES).prefault(STAGES[0]).catch(STAGES[0]),\n    时间: str('暮色将临'),\n    地点: str('王权山庄·演武场'),\n  }).prefault({}).catch({}),\n  清瞳: z.object({\n    状态: str('未正式现身，正在暗处侦察王权山庄'),\n    好感度: z.coerce.number()\n      .transform(value => _.clamp(Math.round(value), 0, 100))\n      .prefault(5)\n      .catch(5),\n    心声: str('王权家的兵器……最好不要惊动他。'),\n  }).prefault({}).catch({}),\n});\n\n$(() => {\n  registerMvuSchema(Schema);\n});\n\nexport {};",
+  "info": "注册王权篇测试 Schema。修改后需要重载脚本并新开对话。",
+  "button": {
+    "enabled": false,
+    "buttons": []
+  },
+  "data": {},
+  "export_with": {
+    "data": true,
+    "button": true
+  }
+}

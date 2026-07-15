@@ -1,0 +1,55 @@
+<main class="card" aria-label="王权篇状态栏">
+  <header class="head">
+    <div>
+      <p class="eyebrow">王权篇 · 清瞳</p>
+      <h2 id="stage">读取剧情阶段中…</h2>
+    </div>
+    <span id="affinity-badge" class="badge">好感 --</span>
+  </header>
+  <section class="facts" aria-label="场景状态">
+    <div class="fact"><span>时间</span><strong id="time">--</strong></div>
+    <div class="fact"><span>地点</span><strong id="location">--</strong></div>
+  </section>
+  <section class="status">
+    <span>清瞳状态</span>
+    <p id="qing-status">正在读取变量…</p>
+  </section>
+  <section class="affinity" aria-label="好感度">
+    <div class="affinity-row"><span id="affinity-label">疏离 / 警戒</span><strong id="affinity-value">0 / 100</strong></div>
+    <div class="track"><i id="affinity-fill"></i></div>
+  </section>
+  <details class="thought">
+    <summary>清瞳心声 <span>展开</span></summary>
+    <p id="thought">……</p>
+  </details>
+</main>
+<style>
+:root{color-scheme:dark;font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;color:#f5ecdf;background:transparent}
+body{padding:6px 2px 10px;background:transparent}
+.card{width:min(100%,760px);margin:0 auto;padding:14px;border:1px solid rgba(235,193,111,.5);border-radius:16px;background:linear-gradient(145deg,rgba(34,22,38,.98),rgba(16,18,31,.98));box-shadow:0 12px 28px rgba(0,0,0,.28);overflow:hidden}
+.head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:11px;border-bottom:1px solid rgba(255,255,255,.09)}
+.eyebrow{margin:0 0 4px;color:#d7aa68;font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+h2{margin:0;color:#fff7e8;font-size:17px;line-height:1.35;font-weight:650;overflow-wrap:anywhere}
+.badge{flex:0 0 auto;padding:6px 9px;border:1px solid rgba(217,171,100,.48);border-radius:999px;background:rgba(217,171,100,.12);color:#f3cf91;font-size:12px;white-space:nowrap}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.fact,.status,.affinity,.thought{border:1px solid rgba(255,255,255,.075);border-radius:11px;background:rgba(255,255,255,.035)}
+.fact{min-width:0;padding:9px 10px}
+.fact span,.status>span{display:block;margin-bottom:4px;color:#b9adbd;font-size:11px}
+.fact strong{display:block;color:#f4eadc;font-size:13px;font-weight:600;overflow-wrap:anywhere}
+.status{margin-top:8px;padding:9px 10px}
+.status p,.thought p{margin:0;color:#ece3e7;font-size:13px;line-height:1.65;overflow-wrap:anywhere}
+.affinity{margin-top:8px;padding:9px 10px}
+.affinity-row{display:flex;justify-content:space-between;gap:10px;margin-bottom:7px;color:#d8c8d7;font-size:12px}
+.affinity-row strong{color:#f2cf93;font-weight:650}
+.track{height:7px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden}
+.track i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#b76579,#e1b06e);transition:width .35s ease}
+.thought{margin-top:8px;padding:0 10px}
+.thought summary{padding:9px 0;color:#dacbd7;font-size:12px;cursor:pointer;list-style:none}
+.thought summary::-webkit-details-marker{display:none}
+.thought summary span{float:right;color:#a99baa}
+.thought[open] summary span{font-size:0}
+.thought[open] summary span::after{content:"收起";font-size:12px}
+.thought p{padding:0 0 10px;color:#cfc3cc;font-style:italic}
+@media(max-width:520px){body{padding:4px 0 8px}.card{padding:11px;border-radius:13px}.head{align-items:center}.facts{grid-template-columns:1fr}h2{font-size:15px}.badge{padding:5px 7px;font-size:11px}}
+@media(max-width:340px){.head{display:block}.badge{display:inline-block;margin-top:8px}.card{padding:9px}}
+</style>

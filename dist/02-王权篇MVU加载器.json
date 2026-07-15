@@ -1,0 +1,17 @@
+{
+  "type": "script",
+  "enabled": true,
+  "name": "02-王权篇MVU加载器",
+  "id": "6ba65821-cd8f-4438-9f7c-acf8f53701df",
+  "content": "// 狐妖小红娘·王权篇 MVU 加载器 v1.1.0\ntry {\n  await import('https://cdn.jsdelivr.net/gh/MagicalAstrogy/MagVarUpdate/artifact/bundle.js');\n} catch (primaryError) {\n  console.warn('[王权篇 MVU] 主镜像加载失败，尝试备用镜像。', primaryError);\n  await import('https://testingcf.jsdelivr.net/gh/MagicalAstrogy/MagVarUpdate/artifact/bundle.js');\n}\n\nexport {};",
+  "info": "加载 MVU 本体。酒馆助手→脚本库→导入；已安装等效加载器时请只启用一支。",
+  "button": {
+    "enabled": false,
+    "buttons": []
+  },
+  "data": {},
+  "export_with": {
+    "data": true,
+    "button": true
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "type": "script",
+  "enabled": true,
+  "name": "04-王权篇媒体资源配置",
+  "id": "2fcf1384-8802-4b31-9ee9-2c5da8f4e011",
+  "content": "// 狐妖小红娘·王权篇媒体资源配置 v1.1.0\n// 构建时只替换下面的占位符；以后切换 R2 仅需修改 config/media-assets.json。\nconst MEDIA_CONFIG = {\"version\":\"1.0.0\",\"assetBaseUrl\":\"http://127.0.0.1:8123/\",\"tracks\":{\"dream_return\":{\"src\":\"音乐/呦猫UNEKO - 梦回还.mp3\",\"title\":\"梦回还\",\"loop\":true,\"volume\":0.38,\"fadeInMs\":1600,\"fadeOutMs\":900}}};\nconst MEDIA_CONFIG_GLOBAL_KEY = '__HYXHN_WANGQUAN_MEDIA_CONFIG__';\n\nfunction publishMediaConfig() {\n  try {\n    window.parent[MEDIA_CONFIG_GLOBAL_KEY] = MEDIA_CONFIG;\n  } catch (error) {\n    console.error('[王权篇媒体配置] 无法向酒馆顶层页面发布配置。', error);\n  }\n}\n\n$(publishMediaConfig);\n\nexport {};",
+  "info": "独立媒体配置。切换到 R2 时只需修改 config/media-assets.json 并重新导入本文件。",
+  "button": {
+    "enabled": false,
+    "buttons": []
+  },
+  "data": {
+    "mediaConfig": {
+      "version": "1.0.0",
+      "assetBaseUrl": "http://127.0.0.1:8123/",
+      "tracks": {
+        "dream_return": {
+          "src": "音乐/呦猫UNEKO - 梦回还.mp3",
+          "title": "梦回还",
+          "loop": true,
+          "volume": 0.38,
+          "fadeInMs": 1600,
+          "fadeOutMs": 900
+        }
+      }
+    }
+  },
+  "export_with": {
+    "data": true,
+    "button": true
+  }
+}

@@ -1,0 +1,17 @@
+# 本机运行日志
+*.log
+
+# 自动部署备份（可能持续增长，不属于发布源码）
+backups/
+
+# 常见本地依赖与编辑器目录
+node_modules/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.bak
+*~

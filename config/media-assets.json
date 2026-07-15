@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "assetBaseUrl": "http://127.0.0.1:8123/",
+  "tracks": {
+    "dream_return": {
+      "src": "音乐/呦猫UNEKO - 梦回还.mp3",
+      "title": "梦回还",
+      "loop": true,
+      "volume": 0.38,
+      "fadeInMs": 1600,
+      "fadeOutMs": 900
+    }
+  }
+}

@@ -14,6 +14,10 @@
     <span>清瞳状态</span>
     <p id="qing-status">正在读取变量…</p>
   </section>
+  <section id="decision-section" class="decision" hidden>
+    <span>命运抉择</span>
+    <p id="decision">尚未选择</p>
+  </section>
   <section class="affinity" aria-label="好感度">
     <div class="affinity-row"><span id="affinity-label">疏离 / 警戒</span><strong id="affinity-value">0 / 100</strong></div>
     <div class="track"><i id="affinity-fill"></i></div>
@@ -32,12 +36,14 @@ body{padding:6px 2px 10px;background:transparent}
 h2{margin:0;color:#fff7e8;font-size:17px;line-height:1.35;font-weight:650;overflow-wrap:anywhere}
 .badge{flex:0 0 auto;padding:6px 9px;border:1px solid rgba(217,171,100,.48);border-radius:999px;background:rgba(217,171,100,.12);color:#f3cf91;font-size:12px;white-space:nowrap}
 .facts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-.fact,.status,.affinity,.thought{border:1px solid rgba(255,255,255,.075);border-radius:11px;background:rgba(255,255,255,.035)}
+.fact,.status,.decision,.affinity,.thought{border:1px solid rgba(255,255,255,.075);border-radius:11px;background:rgba(255,255,255,.035)}
 .fact{min-width:0;padding:9px 10px}
-.fact span,.status>span{display:block;margin-bottom:4px;color:#b9adbd;font-size:11px}
+.fact span,.status>span,.decision>span{display:block;margin-bottom:4px;color:#b9adbd;font-size:11px}
 .fact strong{display:block;color:#f4eadc;font-size:13px;font-weight:600;overflow-wrap:anywhere}
-.status{margin-top:8px;padding:9px 10px}
-.status p,.thought p{margin:0;color:#ece3e7;font-size:13px;line-height:1.65;overflow-wrap:anywhere}
+.status,.decision{margin-top:8px;padding:9px 10px}
+.status p,.decision p,.thought p{margin:0;color:#ece3e7;font-size:13px;line-height:1.65;overflow-wrap:anywhere}
+.decision p{color:#f3cf91;font-weight:650}
+[hidden]{display:none!important}
 .affinity{margin-top:8px;padding:9px 10px}
 .affinity-row{display:flex;justify-content:space-between;gap:10px;margin-bottom:7px;color:#d8c8d7;font-size:12px}
 .affinity-row strong{color:#f2cf93;font-weight:650}

@@ -1,4 +1,17 @@
-// 狐妖小红娘·王权篇顶层弹幕与音乐控制器 v1.1.3
+// 狐妖小红娘·王权篇顶层弹幕、音乐与拔剑抉择控制器 v2.4.0
+// v2.4.0: 向同卡常驻脚本公开可复用的音乐状态、播放与停止接口。
+// v2.3.5: 滚动弹幕纵向轨道扩展至完整视口，消除顶部和底部留白。
+// v2.3.4: 提亮黄色、压深绿色、增加白色弹幕，中央偏移进一步收窄并加入黑色字缘。
+// v2.3.3: 再提高字体本体明度，移除彩色外发光，仅保留黑色可读性描边。
+// v2.3.2: 小幅回提瀑布明度，并收窄中央弹幕版心及横向随机偏移。
+// v2.3.1: 保留高饱和实色，降低弹幕明度与辉光，避免瀑布测试过度刺眼。
+// v2.3.0: 瀑布中央弹幕改为随机最大间隙填充，显著提高发射速度并换用高饱和色板。
+// v2.2.2: 移除瀑布节点上限，中央弹幕按实际行高从顶到底密铺，测试文本统一为指定台词。
+// v2.2.1: 提高弹幕瀑布密度，中央弹幕改为紧密行距循环覆写并让新弹幕压住旧弹幕。
+// v2.2.0: 弹幕增加随机七色、中央无动画避让排版与可开关的全屏弹幕瀑布测试。
+// v2.1.0: 重绘“此去无归”拔剑窗口，嵌入压缩王权剑图标并加入八段进度旋转反馈。
+// v2.0.1: 校正前期剧情弹幕，使其遵循送信、疗伤、蛛丝绘景、放妖与吊树夜探的时间线。
+// v2.0.0: 新增“此去无归”八次拔剑交互、思考弹幕与三路线自动发送。
 // v1.1.3: 显式锁定顶层容器为视口尺寸，避免酒馆窄屏布局将 fixed 容器高度压成 0。
 // v1.1.2: 已有媒体配置时不再跨越 await，保留测试按钮点击带来的音频播放授权。
 // v1.1.1: 弹幕层和测试按钮同步初始化；增加顶层点击捕获兜底与重复触发去重。
@@ -10,9 +23,59 @@ const ROOT_ID = 'hyxhn-wangquan-top-overlay';
 const AUDIO_ID = 'hyxhn-wangquan-audio';
 const AUDIO_UNLOCK_ID = 'hyxhn-wangquan-audio-unlock';
 const AUDIO_UNLOCK_BRIDGE_ID = 'hyxhn-wangquan-audio-unlock-bridge';
+const DECISION_MODAL_ID = 'hyxhn-wangquan-decision-modal';
 const AUDIO_UNLOCK_CLEANUP_KEY = '__HYXHN_WANGQUAN_AUDIO_UNLOCK_CLEANUP__';
+const MEDIA_API_GLOBAL_KEY = '__HYXHN_WANGQUAN_MEDIA_API__';
 const CHAT_STATE_KEY = 'hyxhn_media_runtime';
 const MEDIA_CONFIG_GLOBAL_KEY = '__HYXHN_WANGQUAN_MEDIA_CONFIG__';
+const DECISION_STAGE = '04_决裂_此去无归';
+const DECISION_REQUIRED_CLICKS = 8;
+const DECISION_SWORD_ICON_DATA_URL = '__HYXHN_SWORD_ICON_DATA_URL__';
+
+const DANMAKU_COLORS = Object.freeze([
+  { color: '#f2d400', glow: 'rgba(242, 212, 0, .72)' },
+  { color: '#cf1717', glow: 'rgba(207, 23, 23, .72)' },
+  { color: '#0759c7', glow: 'rgba(7, 89, 199, .72)' },
+  { color: '#009ab8', glow: 'rgba(0, 154, 184, .72)' },
+  { color: '#007a32', glow: 'rgba(0, 122, 50, .72)' },
+  { color: '#ca187f', glow: 'rgba(202, 24, 127, .72)' },
+  { color: '#7414bd', glow: 'rgba(116, 20, 189, .72)' },
+  { color: '#f2f2f2', glow: 'rgba(242, 242, 242, .72)' },
+]);
+
+const WATERFALL_TEXT = '如果我们能活着出去的话，万水千山，你愿意陪我一起看吗?';
+
+const DECISION_THOUGHTS = Object.freeze([
+  '人和妖……真的不能和平相处吗？',
+  '父亲说的，就一定是对的吗？',
+  '如果服从，我还是我吗？',
+  '她也会疼，也会害怕。',
+  '这把剑，是为了杀妖，还是为了守护？',
+  '我挥出的每一剑，都只能由别人决定吗？',
+  '若连眼前的人都救不了，力量又有什么意义？',
+  '这一次……我要自己选择。',
+]);
+
+const DECISION_CHOICES = Object.freeze({
+  kill: {
+    label: '杀掉清瞳',
+    hint: '服从父命，斩断最后的自我',
+    value: '杀掉清瞳',
+    message: '我拔出王权剑，亲手杀死被缚的清瞳，选择服从父命。就让这一剑连同我仅存的情感、自我与自主思考一起斩断。',
+  },
+  abandon: {
+    label: '弃剑',
+    hint: '拒绝父命，以血肉面对山庄万剑',
+    value: '弃剑',
+    message: '我将王权剑弃在父亲面前，拒绝杀死清瞳。哪怕要以血肉之躯面对整座山庄的万剑，我也要护住她。',
+  },
+  rescue: {
+    label: '持剑抱起清瞳',
+    hint: '保留王权剑，亲手破开归路',
+    value: '持剑救走清瞳',
+    message: '我没有弃剑。我握住王权剑，俯身抱起清瞳，决定以自己的剑破开王权山庄，带她离开。',
+  },
+});
 
 const MVU_EVENTS = {
   initialized: 'mag_variable_initiailized',
@@ -24,23 +87,26 @@ const STAGE_EVENTS = Object.freeze({
     normal: ['王权山庄，戒律森严', '他被称作王权家最锋利的剑'],
   },
   '01_任务_蛛网疑影': {
-    normal: ['新的除妖令已经下达', '这一次的妖气来自蛛网深处'],
+    normal: ['一封被逼送来的信，将清瞳带到他面前', '他没有挥剑，反而替她处理了伤口'],
   },
   '02_初遇_笼中清瞳': {
     music: 'dream_return',
-    normal: ['清瞳登场！', '命运的蛛丝已经相连', '她带来的不只是一次刺探'],
+    normal: ['蛛丝铺开，山庄之外的天地第一次有了形状', '她一幅幅画，他便一次次重新认识所谓的妖'],
   },
   '03_相知_画中山河': {
-    normal: ['原来山庄之外还有这样的天地', '她用蛛丝织出了他未见过的风景'],
-    center: ['他第一次真正向往山庄之外的世界'],
+    normal: ['他因给妖怪留下生路，被吊上树梢受罚', '禁制解不开，她便继续为他画外面的世界'],
+    center: ['他如今的愿望，只是多看看外面的世界'],
   },
-  '04_决裂_出逃山庄': {
-    normal: ['王权剑意与家规正面相撞', '前方是整座山庄的阻拦'],
-    center: ['纵然万剑加身，他也没有回头'],
+  '04_决裂_此去无归': {
+    normal: ['王权剑落在身前', '这一剑拔出之后，此去无归'],
   },
   '05_尾声_万水千山': {
     normal: ['这一次，选择不再由家族替他作出'],
     center: ['若能走出这里，便一起去看万水千山'],
+  },
+  '05_结局_无心之剑': {
+    normal: ['他终于成为了王权家最完美的剑'],
+    center: ['剑仍有锋芒，执剑之人却已不在'],
   },
 });
 
@@ -51,14 +117,21 @@ const runtime = {
   config: null,
   configReady: null,
   lastStage: null,
+  lastDecision: null,
+  decisionDemoMode: false,
   lastButtonAction: null,
   currentTrack: null,
   pendingPlayback: false,
   audioUnlockCleanup: null,
   fadeTimer: null,
+  waterfallActive: false,
+  waterfallTimers: new Set(),
+  waterfallCenterSerial: 0,
+  lastDanmakuColor: -1,
   timers: new Set(),
   cleanupCallbacks: [],
 };
+let mediaApi = null;
 
 function safeParentDocument() {
   try {
@@ -84,7 +157,7 @@ function mountOverlay() {
 
   const root = doc.createElement('div');
   root.id = ROOT_ID;
-  root.setAttribute('aria-hidden', 'true');
+  root.setAttribute('role', 'presentation');
 
   const style = doc.createElement('style');
   style.textContent = `
@@ -118,17 +191,263 @@ function mountOverlay() {
       font-weight: 700;
       cursor: pointer;
     }
+    #${ROOT_ID} #${DECISION_MODAL_ID} {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: clamp(14px, 4vw, 42px);
+      pointer-events: auto;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(190, 128, 42, .16), transparent 31%),
+        radial-gradient(circle at 50% 58%, rgba(87, 18, 27, .22), transparent 55%),
+        rgba(1, 2, 5, .93);
+      backdrop-filter: blur(9px) saturate(.78);
+      animation: hyxhn-decision-fade .45s ease both;
+    }
+    #${ROOT_ID} .hyxhn-decision-panel {
+      position: relative;
+      isolation: isolate;
+      width: min(92vw, 680px);
+      max-height: min(90vh, 820px);
+      overflow: auto;
+      padding: clamp(22px, 4.5vw, 42px);
+      border: 1px solid rgba(234, 193, 111, .5);
+      border-radius: 7px;
+      color: #f9f1e3;
+      background:
+        linear-gradient(90deg, transparent 49.7%, rgba(223, 178, 87, .045) 50%, transparent 50.3%),
+        radial-gradient(circle at 50% 31%, rgba(143, 91, 27, .16), transparent 40%),
+        linear-gradient(155deg, rgba(23, 20, 18, .99), rgba(5, 7, 12, .995) 68%);
+      box-shadow:
+        0 34px 110px rgba(0, 0, 0, .86),
+        0 0 0 5px rgba(3, 4, 7, .9),
+        0 0 0 6px rgba(185, 132, 50, .22),
+        inset 0 0 70px rgba(126, 26, 31, .1);
+      text-align: center;
+    }
+    #${ROOT_ID} .hyxhn-decision-panel::before,
+    #${ROOT_ID} .hyxhn-decision-panel::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      pointer-events: none;
+    }
+    #${ROOT_ID} .hyxhn-decision-panel::before {
+      inset: 11px;
+      border: 1px solid rgba(219, 171, 81, .16);
+      clip-path: polygon(0 0, 38% 0, 40% 2px, 60% 2px, 62% 0, 100% 0, 100% 100%, 62% 100%, 60% calc(100% - 2px), 40% calc(100% - 2px), 38% 100%, 0 100%);
+    }
+    #${ROOT_ID} .hyxhn-decision-panel::after {
+      left: 50%;
+      top: 18px;
+      width: 86px;
+      height: 1px;
+      transform: translateX(-50%);
+      background: linear-gradient(90deg, transparent, #d5a85a, transparent);
+      box-shadow: 0 0 12px rgba(231, 184, 95, .5);
+    }
+    #${ROOT_ID} .hyxhn-decision-kicker {
+      margin: 0 0 8px;
+      color: #bd9152;
+      font-size: 10px;
+      letter-spacing: .38em;
+      text-transform: uppercase;
+    }
+    #${ROOT_ID} .hyxhn-decision-title {
+      margin: 0;
+      font-family: "STKaiti", "KaiTi", serif;
+      color: #f5e6c4;
+      font-size: clamp(28px, 6vw, 46px);
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-shadow: 0 2px 18px rgba(207, 153, 65, .24);
+    }
+    #${ROOT_ID} .hyxhn-decision-subtitle {
+      margin: 10px auto 16px;
+      color: #bdb3a6;
+      font-size: clamp(12px, 2.8vw, 15px);
+      line-height: 1.7;
+    }
+    #${ROOT_ID} .hyxhn-decision-instruction {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 auto 12px;
+      color: #d0aa67;
+      font-size: 11px;
+      letter-spacing: .16em;
+    }
+    #${ROOT_ID} .hyxhn-decision-instruction::before,
+    #${ROOT_ID} .hyxhn-decision-instruction::after {
+      content: "";
+      width: 28px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(209, 161, 80, .65));
+    }
+    #${ROOT_ID} .hyxhn-decision-instruction::after { transform: rotate(180deg); }
+    #${ROOT_ID} .hyxhn-sword-button {
+      --hyxhn-sword-turn: 0deg;
+      --hyxhn-sword-angle: 0deg;
+      --hyxhn-sword-glow: 28px;
+      --hyxhn-sword-glow-alpha: .22;
+      --hyxhn-sword-saturation: .76;
+      --hyxhn-sword-brightness: .82;
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: clamp(142px, 34vw, 184px);
+      aspect-ratio: 1;
+      margin: 0 auto 18px;
+      padding: 11px;
+      border: 0;
+      border-radius: 50%;
+      color: #f4d799;
+      background:
+        radial-gradient(circle, rgba(231, 177, 75, .14), transparent 65%),
+        #08090b;
+      box-shadow:
+        0 0 var(--hyxhn-sword-glow) rgba(213, 154, 57, var(--hyxhn-sword-glow-alpha)),
+        0 18px 42px rgba(0, 0, 0, .56);
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform .12s ease, box-shadow .28s ease;
+    }
+    #${ROOT_ID} .hyxhn-sword-button::before {
+      content: "";
+      position: absolute;
+      inset: 1px;
+      border-radius: inherit;
+      background: conic-gradient(from -90deg, #f4d58d var(--hyxhn-sword-angle), rgba(92, 76, 53, .28) 0);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 0);
+      mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 0);
+      filter: drop-shadow(0 0 7px rgba(230, 177, 76, .38));
+    }
+    #${ROOT_ID} .hyxhn-sword-button::after {
+      content: "";
+      position: absolute;
+      inset: -9px;
+      border: 1px solid rgba(217, 170, 84, .22);
+      border-radius: inherit;
+      border-left-color: rgba(239, 205, 139, .68);
+      border-right-color: rgba(133, 31, 34, .65);
+      animation: hyxhn-sword-orbit 9s linear infinite;
+    }
+    #${ROOT_ID} .hyxhn-sword-image-frame {
+      position: relative;
+      display: block;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border: 1px solid rgba(230, 189, 108, .52);
+      border-radius: 50%;
+      background: #050609;
+      transform: rotate(var(--hyxhn-sword-turn));
+      transition: transform .42s cubic-bezier(.22, .78, .28, 1.18), filter .28s ease;
+      box-shadow: inset 0 0 18px rgba(0, 0, 0, .75);
+    }
+    #${ROOT_ID} .hyxhn-sword-image {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      user-select: none;
+      -webkit-user-drag: none;
+      filter: saturate(var(--hyxhn-sword-saturation)) brightness(var(--hyxhn-sword-brightness));
+    }
+    #${ROOT_ID} .hyxhn-sword-button-label {
+      position: absolute;
+      left: 50%;
+      bottom: 17%;
+      z-index: 2;
+      min-width: 52px;
+      padding: 3px 9px;
+      transform: translateX(-50%);
+      border: 1px solid rgba(237, 199, 127, .54);
+      border-radius: 999px;
+      color: #f8e5bb;
+      background: rgba(7, 7, 8, .78);
+      box-shadow: 0 3px 13px rgba(0, 0, 0, .7);
+      font-size: 11px;
+      letter-spacing: .2em;
+      text-indent: .2em;
+      pointer-events: none;
+    }
+    #${ROOT_ID} .hyxhn-sword-button:hover { transform: translateY(-2px); }
+    #${ROOT_ID} .hyxhn-sword-button:active { transform: scale(.94); }
+    #${ROOT_ID} .hyxhn-sword-button.is-pulsing .hyxhn-sword-image-frame { animation: hyxhn-sword-pulse .42s ease; }
+    #${ROOT_ID} .hyxhn-sword-button.is-complete::after { animation-duration: 2.5s; border-color: rgba(241, 202, 121, .72); }
+    #${ROOT_ID} .hyxhn-sword-button[disabled] { cursor: default; }
+    #${ROOT_ID} .hyxhn-decision-progress {
+      position: relative;
+      height: 9px;
+      margin: 0 auto 9px;
+      border: 1px solid rgba(209, 163, 82, .2);
+      border-radius: 99px;
+      background: rgba(255, 255, 255, .055);
+      overflow: hidden;
+    }
+    #${ROOT_ID} .hyxhn-decision-progress > i {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #70202c, #b77834 48%, #f3d18c);
+      box-shadow: 0 0 16px rgba(232, 191, 115, .58);
+      transition: width .4s cubic-bezier(.22, .78, .28, 1);
+    }
+    #${ROOT_ID} .hyxhn-decision-marks {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 4px;
+      margin: 0 4px 8px;
+    }
+    #${ROOT_ID} .hyxhn-decision-marks > i {
+      height: 2px;
+      background: rgba(208, 179, 129, .17);
+      transition: background .28s ease, box-shadow .28s ease;
+    }
+    #${ROOT_ID} .hyxhn-decision-marks > i.is-active { background: #d7a856; box-shadow: 0 0 8px rgba(226, 177, 87, .5); }
+    #${ROOT_ID} .hyxhn-decision-count { margin: 0; color: #a99e91; font-size: 12px; letter-spacing: .08em; }
+    #${ROOT_ID} .hyxhn-decision-choices { display: grid; gap: 9px; margin-top: 18px; }
+    #${ROOT_ID} .hyxhn-decision-choice {
+      display: grid;
+      grid-template-columns: minmax(92px, .8fr) 1.4fr;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 4px;
+      color: #f4e9dc;
+      background: rgba(255, 255, 255, .045);
+      text-align: left;
+      cursor: pointer;
+      transition: border-color .18s ease, background .18s ease, transform .12s ease;
+    }
+    #${ROOT_ID} .hyxhn-decision-choice:hover { border-color: rgba(231, 194, 123, .58); background: rgba(215, 171, 96, .1); }
+    #${ROOT_ID} .hyxhn-decision-choice:active { transform: scale(.985); }
+    #${ROOT_ID} .hyxhn-decision-choice strong { color: #f4d799; font-size: 14px; }
+    #${ROOT_ID} .hyxhn-decision-choice span { color: #b7aab0; font-size: 12px; line-height: 1.5; }
+    #${ROOT_ID} .hyxhn-decision-choice[data-choice="kill"] strong { color: #e88891; }
+    #${ROOT_ID} .hyxhn-decision-demo { margin: 13px 0 0; color: #a99ca2; font-size: 11px; }
     #${ROOT_ID} .hyxhn-danmaku-normal {
       position: absolute;
       left: 100vw;
       max-width: 72vw;
       white-space: nowrap;
-      color: #fff;
+      z-index: 4;
+      color: var(--hyxhn-danmaku-color, #fff);
       font-size: clamp(18px, 2vw, 30px);
       font-weight: 700;
       line-height: 1.4;
       letter-spacing: .04em;
-      text-shadow: 0 2px 3px #000, 0 0 8px rgba(214, 67, 96, .9);
+      -webkit-text-stroke: 1px rgba(0, 0, 0, .96);
+      paint-order: stroke fill;
+      text-shadow:
+        0 2px 3px #000,
+        1px 0 1px #000,
+        -1px 0 1px #000;
       animation: hyxhn-danmaku-fly var(--hyxhn-duration, 9s) linear forwards;
       will-change: transform;
     }
@@ -136,33 +455,44 @@ function mountOverlay() {
       position: absolute;
       left: 50%;
       top: 46%;
-      width: min(86vw, 1000px);
-      color: #fff4df;
-      font-size: clamp(26px, 4vw, 58px);
+      z-index: 5;
+      width: min(72vw, 760px);
+      color: var(--hyxhn-danmaku-color, #fff4df);
+      font-size: clamp(18px, 2.5vw, 34px);
       font-weight: 800;
-      line-height: 1.35;
+      line-height: 1.25;
       text-align: center;
       letter-spacing: .08em;
-      text-shadow: 0 3px 4px #000, 0 0 14px rgba(203, 37, 75, .95);
-      animation: hyxhn-danmaku-center-in 4.2s ease both;
-      will-change: transform, opacity;
+      transform: translate(-50%, -50%);
+      -webkit-text-stroke: 1px rgba(0, 0, 0, .96);
+      paint-order: stroke fill;
+      text-shadow:
+        0 3px 4px #000,
+        1px 0 1px #000,
+        -1px 0 1px #000;
+    }
+    #${ROOT_ID} .hyxhn-danmaku-waterfall {
+      filter: saturate(1.36) brightness(.98) contrast(1.12);
     }
     @keyframes hyxhn-danmaku-fly {
       from { transform: translateX(0); }
       to { transform: translateX(calc(-100vw - 100%)); }
     }
-    @keyframes hyxhn-danmaku-center-in {
-      0% { opacity: 0; transform: translate(-50%, -50%) scale(.84); filter: blur(3px); }
-      16%, 72% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); }
-      100% { opacity: 0; transform: translate(-50%, -50%) scale(1.06); filter: blur(1px); }
+    @keyframes hyxhn-decision-fade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes hyxhn-sword-orbit { to { transform: rotate(1turn); } }
+    @keyframes hyxhn-sword-pulse {
+      0%, 100% { filter: brightness(1); }
+      45% { filter: brightness(1.42) drop-shadow(0 0 9px rgba(244, 201, 112, .75)); }
     }
     @media (max-width: 720px) {
       #${ROOT_ID} .hyxhn-danmaku-normal { max-width: 88vw; }
-      #${ROOT_ID} .hyxhn-danmaku-center { width: 92vw; top: 43%; }
+      #${ROOT_ID} .hyxhn-danmaku-center { width: 92vw; }
+      #${ROOT_ID} .hyxhn-decision-choice { grid-template-columns: 1fr; gap: 3px; }
     }
     @media (prefers-reduced-motion: reduce) {
       #${ROOT_ID} .hyxhn-danmaku-normal { animation-duration: 14s; }
-      #${ROOT_ID} .hyxhn-danmaku-center { animation-duration: 5.5s; }
+      #${ROOT_ID} .hyxhn-sword-button::after { animation: none; }
+      #${ROOT_ID} .hyxhn-sword-image-frame { transition-duration: .01ms; }
     }
   `;
 
@@ -201,24 +531,322 @@ function mountAudioUnlockBridge() {
   doc.head.appendChild(bridge);
 }
 
+function randomFrom(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function applyDanmakuColor(node, requestedColor) {
+  let palette;
+  if (requestedColor) {
+    palette = { color: requestedColor, glow: requestedColor };
+  } else {
+    const candidates = DANMAKU_COLORS.map((value, index) => ({ ...value, index }))
+      .filter((value) => value.index !== runtime.lastDanmakuColor);
+    palette = randomFrom(candidates);
+    runtime.lastDanmakuColor = palette.index;
+  }
+  node.style.setProperty('--hyxhn-danmaku-color', palette.color);
+  node.style.setProperty('--hyxhn-danmaku-glow', palette.glow);
+}
+
 function showNormalDanmaku(text, options = {}) {
   if (!runtime.overlay || !text) return;
   const node = runtime.parentDocument.createElement('div');
-  node.className = 'hyxhn-danmaku-normal';
+  node.className = `hyxhn-danmaku-normal${options.waterfall ? ' hyxhn-danmaku-waterfall' : ''}`;
   node.textContent = String(text);
-  node.style.top = `${options.top ?? 12 + Math.random() * 62}%`;
+  applyDanmakuColor(node, options.color);
+  node.style.top = `${options.top ?? Math.random() * 98}%`;
   node.style.setProperty('--hyxhn-duration', `${options.duration ?? 8 + Math.random() * 3}s`);
   runtime.overlay.appendChild(node);
   node.addEventListener('animationend', () => node.remove(), { once: true });
 }
 
-function showCenterDanmaku(text) {
+function overlapScore(candidate, occupied, padding = 8) {
+  return occupied.reduce((score, rect) => {
+    const width = Math.max(0, Math.min(candidate.right, rect.right) - Math.max(candidate.left, rect.left) + padding);
+    const height = Math.max(0, Math.min(candidate.bottom, rect.bottom) - Math.max(candidate.top, rect.top) + padding);
+    return score + width * height;
+  }, 0);
+}
+
+function placeCenterDanmaku(node) {
+  const candidates = [17, 28, 39, 50, 61, 72, 83];
+  const occupied = [...runtime.overlay.querySelectorAll('.hyxhn-danmaku-center')]
+    .filter((item) => item !== node && item.isConnected)
+    .map((item) => item.getBoundingClientRect());
+  let best = { top: candidates[0], score: Number.POSITIVE_INFINITY };
+
+  for (const top of candidates) {
+    node.style.top = `${top}%`;
+    const score = overlapScore(node.getBoundingClientRect(), occupied);
+    if (score === 0) return top;
+    if (score < best.score) best = { top, score };
+  }
+  return best.top;
+}
+
+function placeWaterfallCenterDanmaku(node) {
+  const serial = runtime.waterfallCenterSerial;
+  runtime.waterfallCenterSerial += 1;
+  const positions = [...runtime.overlay.querySelectorAll('.hyxhn-danmaku-center.hyxhn-danmaku-waterfall')]
+    .filter((item) => item !== node && item.isConnected)
+    .map((item) => Number.parseFloat(item.style.top))
+    .filter(Number.isFinite)
+    .sort((left, right) => left - right);
+  let top = Math.random() * 99;
+
+  if (positions.length > 0) {
+    const boundaries = [0, ...positions, 100];
+    const gaps = [];
+    for (let index = 1; index < boundaries.length; index += 1) {
+      gaps.push({ start: boundaries[index - 1], end: boundaries[index], size: boundaries[index] - boundaries[index - 1] });
+    }
+    gaps.sort((left, right) => right.size - left.size);
+    const candidatePool = gaps.slice(0, Math.min(8, gaps.length));
+    const gap = randomFrom(candidatePool);
+    top = gap.start + gap.size * (.34 + Math.random() * .32);
+  }
+
+  top = _.clamp(top, .45, 99.55);
+  node.style.top = `${top}%`;
+  node.style.left = `${49 + Math.random() * 2}%`;
+  node.style.fontSize = `${17 + Math.random() * 5}px`;
+  node.style.zIndex = String(20 + serial % 1000);
+  return top;
+}
+
+function showCenterDanmaku(text, options = {}) {
   if (!runtime.overlay || !text) return;
   const node = runtime.parentDocument.createElement('div');
-  node.className = 'hyxhn-danmaku-center';
+  node.className = `hyxhn-danmaku-center${options.waterfall ? ' hyxhn-danmaku-waterfall' : ''}`;
   node.textContent = String(text);
+  applyDanmakuColor(node, options.color);
+  node.style.visibility = 'hidden';
   runtime.overlay.appendChild(node);
-  node.addEventListener('animationend', () => node.remove(), { once: true });
+  const top = options.top ?? (options.waterfallStack
+    ? placeWaterfallCenterDanmaku(node)
+    : placeCenterDanmaku(node));
+  node.style.top = `${top}%`;
+  node.style.visibility = '';
+  schedule(() => node.remove(), options.duration ?? 4200);
+}
+
+function scheduleWaterfall(callback, delay) {
+  const timer = window.setTimeout(() => {
+    runtime.waterfallTimers.delete(timer);
+    callback();
+  }, delay);
+  runtime.waterfallTimers.add(timer);
+  return timer;
+}
+
+function stopDanmakuWaterfall({ announce = true } = {}) {
+  const wasActive = runtime.waterfallActive;
+  runtime.waterfallActive = false;
+  runtime.waterfallTimers.forEach((timer) => window.clearTimeout(timer));
+  runtime.waterfallTimers.clear();
+  runtime.overlay?.querySelectorAll('.hyxhn-danmaku-waterfall').forEach((node) => node.remove());
+  if (announce && wasActive) showCenterDanmaku('弹幕瀑布已关闭', { duration: 1800 });
+}
+
+function startDanmakuWaterfall() {
+  if (runtime.waterfallActive) {
+    showCenterDanmaku('弹幕瀑布已经在运行', { duration: 1600 });
+    return;
+  }
+  runtime.waterfallActive = true;
+  runtime.waterfallCenterSerial = 0;
+
+  const normalLoop = () => {
+    if (!runtime.waterfallActive) return;
+    const burst = 4 + Math.floor(Math.random() * 3);
+    for (let index = 0; index < burst; index += 1) {
+      showNormalDanmaku(WATERFALL_TEXT, {
+        top: Math.random() * 98,
+        duration: 5.2 + Math.random() * 2.3,
+        waterfall: true,
+      });
+    }
+    scheduleWaterfall(normalLoop, 45 + Math.random() * 20);
+  };
+
+  const centerLoop = () => {
+    if (!runtime.waterfallActive) return;
+    const burst = 4 + Math.floor(Math.random() * 3);
+    for (let index = 0; index < burst; index += 1) {
+      showCenterDanmaku(WATERFALL_TEXT, {
+        duration: 5500 + Math.random() * 1500,
+        waterfall: true,
+        waterfallStack: true,
+      });
+    }
+    scheduleWaterfall(centerLoop, 30 + Math.random() * 15);
+  };
+
+  normalLoop();
+  centerLoop();
+}
+
+function getDecisionRuntime() {
+  const value = getChatRuntime().decision || {};
+  return {
+    clicks: _.clamp(Math.round(Number(value.clicks) || 0), 0, DECISION_REQUIRED_CLICKS),
+    sentChoice: value.sentChoice || null,
+  };
+}
+
+function updateDecisionRuntime(patch) {
+  updateVariablesWith((variables) => {
+    const next = _.cloneDeep(variables || {});
+    const current = next[CHAT_STATE_KEY] || { triggered: {} };
+    current.triggered = current.triggered || {};
+    current.decision = { ...(current.decision || {}), ...patch };
+    next[CHAT_STATE_KEY] = current;
+    return next;
+  }, { type: 'chat' });
+}
+
+function closeDecisionModal() {
+  runtime.parentDocument?.getElementById(DECISION_MODAL_ID)?.remove();
+  runtime.decisionDemoMode = false;
+}
+
+async function sendDecisionChoice(choiceKey) {
+  const choice = DECISION_CHOICES[choiceKey];
+  if (!choice) return;
+
+  if (runtime.decisionDemoMode) {
+    closeDecisionModal();
+    showCenterDanmaku(`演示选择：${choice.label}`);
+    return;
+  }
+
+  const decision = getDecisionRuntime();
+  if (decision.sentChoice) return;
+  updateDecisionRuntime({ clicks: DECISION_REQUIRED_CLICKS, sentChoice: choice.value });
+  closeDecisionModal();
+  showCenterDanmaku(`你选择了：${choice.label}`);
+
+  try {
+    await createChatMessages([{ role: 'user', message: choice.message }], { refresh: 'all' });
+    await triggerSlash('/trigger');
+  } catch (error) {
+    updateDecisionRuntime({ sentChoice: null });
+    console.error('[王权篇抉择] 自动发送选择失败。', error);
+    toastr?.error?.('选择未能自动发送，请重试。');
+    openDecisionModal();
+  }
+}
+
+function openDecisionModal({ demo = false } = {}) {
+  if (!runtime.overlay) return;
+  const existing = runtime.parentDocument.getElementById(DECISION_MODAL_ID);
+  if (existing) return;
+
+  const persisted = getDecisionRuntime();
+  if (!demo && persisted.sentChoice) return;
+  runtime.decisionDemoMode = demo;
+  let clicks = demo ? 0 : persisted.clicks;
+
+  const modal = runtime.parentDocument.createElement('section');
+  modal.id = DECISION_MODAL_ID;
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'hyxhn-decision-title');
+
+  const panel = runtime.parentDocument.createElement('div');
+  panel.className = 'hyxhn-decision-panel';
+  panel.innerHTML = `
+    <p class="hyxhn-decision-kicker">王权篇 · 命运抉择</p>
+    <h2 id="hyxhn-decision-title" class="hyxhn-decision-title">此去无归</h2>
+    <p class="hyxhn-decision-subtitle">父命、王权剑与倒在地上的清瞳。<br>剑在手中，去留却该由谁决定？</p>
+    <p class="hyxhn-decision-instruction">连续点击 · 亲手拔剑</p>
+    <button class="hyxhn-sword-button" type="button" aria-label="拔出王权剑">
+      <span class="hyxhn-sword-image-frame" aria-hidden="true">
+        <img class="hyxhn-sword-image" src="${DECISION_SWORD_ICON_DATA_URL}" alt="">
+      </span>
+      <span class="hyxhn-sword-button-label">执剑</span>
+    </button>
+    <div class="hyxhn-decision-progress" role="progressbar" aria-label="拔剑进度" aria-valuemin="0" aria-valuemax="${DECISION_REQUIRED_CLICKS}" aria-valuenow="0"><i></i></div>
+    <div class="hyxhn-decision-marks" aria-hidden="true">${'<i></i>'.repeat(DECISION_REQUIRED_CLICKS)}</div>
+    <p class="hyxhn-decision-count"></p>
+    <div class="hyxhn-decision-choices" hidden></div>
+  `;
+
+  if (demo) {
+    const note = runtime.parentDocument.createElement('p');
+    note.className = 'hyxhn-decision-demo';
+    note.textContent = '测试模式：选择不会发送消息或改变剧情。';
+    panel.appendChild(note);
+  }
+
+  const swordButton = panel.querySelector('.hyxhn-sword-button');
+  const progressTrack = panel.querySelector('.hyxhn-decision-progress');
+  const progress = progressTrack.querySelector('i');
+  const progressMarks = [...panel.querySelectorAll('.hyxhn-decision-marks > i')];
+  const count = panel.querySelector('.hyxhn-decision-count');
+  const choices = panel.querySelector('.hyxhn-decision-choices');
+
+  const revealChoices = () => {
+    if (choices.childElementCount === 0) {
+      for (const [key, choice] of Object.entries(DECISION_CHOICES)) {
+        const button = runtime.parentDocument.createElement('button');
+        button.type = 'button';
+        button.className = 'hyxhn-decision-choice';
+        button.dataset.choice = key;
+        const title = runtime.parentDocument.createElement('strong');
+        title.textContent = choice.label;
+        const hint = runtime.parentDocument.createElement('span');
+        hint.textContent = choice.hint;
+        button.append(title, hint);
+        button.addEventListener('click', () => void sendDecisionChoice(key));
+        choices.appendChild(button);
+      }
+    }
+    choices.hidden = false;
+    swordButton.disabled = true;
+    swordButton.classList.add('is-complete');
+    swordButton.querySelector('.hyxhn-sword-button-label').textContent = '出鞘';
+  };
+
+  const renderProgress = () => {
+    const percent = clicks / DECISION_REQUIRED_CLICKS * 100;
+    progress.style.width = `${percent}%`;
+    progressTrack.setAttribute('aria-valuenow', String(clicks));
+    const ratio = clicks / DECISION_REQUIRED_CLICKS;
+    swordButton.style.setProperty('--hyxhn-sword-turn', `${clicks * 45}deg`);
+    swordButton.style.setProperty('--hyxhn-sword-angle', `${clicks * 45}deg`);
+    swordButton.style.setProperty('--hyxhn-sword-glow', `${28 + ratio * 38}px`);
+    swordButton.style.setProperty('--hyxhn-sword-glow-alpha', String(.22 + ratio * .28));
+    swordButton.style.setProperty('--hyxhn-sword-saturation', String(.76 + ratio * .42));
+    swordButton.style.setProperty('--hyxhn-sword-brightness', String(.82 + ratio * .3));
+    swordButton.setAttribute('aria-label', clicks >= DECISION_REQUIRED_CLICKS
+      ? '王权剑已出鞘'
+      : `拔出王权剑，当前 ${clicks} / ${DECISION_REQUIRED_CLICKS}`);
+    progressMarks.forEach((mark, index) => mark.classList.toggle('is-active', index < clicks));
+    count.textContent = clicks >= DECISION_REQUIRED_CLICKS
+      ? '王权剑已出鞘。现在，由你决定。'
+      : clicks === 0
+        ? '剑意沉寂 · 尚未拔动'
+        : `剑意渐醒 · ${clicks} / ${DECISION_REQUIRED_CLICKS}`;
+    if (clicks >= DECISION_REQUIRED_CLICKS) revealChoices();
+  };
+
+  swordButton.addEventListener('click', () => {
+    if (clicks >= DECISION_REQUIRED_CLICKS) return;
+    clicks += 1;
+    if (!demo) updateDecisionRuntime({ clicks });
+    showNormalDanmaku(DECISION_THOUGHTS[clicks - 1], { top: 13 + clicks * 7, duration: 8.6 });
+    swordButton.classList.remove('is-pulsing');
+    void swordButton.offsetWidth;
+    swordButton.classList.add('is-pulsing');
+    renderProgress();
+  });
+
+  modal.appendChild(panel);
+  runtime.overlay.appendChild(modal);
+  renderProgress();
+  swordButton.focus();
 }
 
 async function readMediaConfig() {
@@ -402,6 +1030,31 @@ function stopMusic() {
   });
 }
 
+function exposeMediaApi() {
+  mediaApi = Object.freeze({
+    version: '1.0.0',
+    getState() {
+      return {
+        currentTrack: runtime.currentTrack,
+        playing: Boolean(runtime.audio && !runtime.audio.paused && runtime.currentTrack),
+        paused: Boolean(runtime.audio?.paused),
+        pendingPlayback: runtime.pendingPlayback,
+      };
+    },
+    playTrack(trackKey, options = {}) {
+      return startTrack(trackKey, options);
+    },
+    stopMusic: () => stopMusic(),
+  });
+  window[MEDIA_API_GLOBAL_KEY] = mediaApi;
+  try { runtime.parentDocument.defaultView[MEDIA_API_GLOBAL_KEY] = mediaApi; } catch (_) {}
+  try {
+    if (typeof initializeGlobal === 'function') initializeGlobal(MEDIA_API_GLOBAL_KEY, mediaApi);
+  } catch (error) {
+    console.info('[王权篇媒体] 全局音乐接口注册失败，保留父窗口直连。', error);
+  }
+}
+
 function getChatRuntime() {
   try {
     return getVariables({ type: 'chat' })?.[CHAT_STATE_KEY] || { triggered: {} };
@@ -428,6 +1081,16 @@ function extractStage(variables) {
     ?? null;
 }
 
+function extractDecision(variables) {
+  return _.get(variables, 'stat_data.剧情.最终抉择')
+    ?? _.get(variables, '剧情.最终抉择')
+    ?? '尚未选择';
+}
+
+function shouldOpenDecision(stage, decision) {
+  return stage === DECISION_STAGE && decision === '尚未选择' && !getDecisionRuntime().sentChoice;
+}
+
 async function playStageEvent(stage, { force = false } = {}) {
   const event = STAGE_EVENTS[stage];
   if (!event) return;
@@ -448,8 +1111,16 @@ async function playStageEvent(stage, { force = false } = {}) {
 
 function handleVariables(variables, { allowInitial = false } = {}) {
   const stage = extractStage(variables);
-  if (!stage || stage === runtime.lastStage) return;
+  const decision = extractDecision(variables);
+  if (!stage) return;
+
+  if (shouldOpenDecision(stage, decision)) openDecisionModal();
+  else if (!runtime.decisionDemoMode) closeDecisionModal();
+
+  const stageChanged = stage !== runtime.lastStage;
   runtime.lastStage = stage;
+  runtime.lastDecision = decision;
+  if (!stageChanged) return;
 
   if (!allowInitial && getChatRuntime().triggered?.[stage]) return;
   void playStageEvent(stage);
@@ -465,6 +1136,12 @@ async function resetMediaTrigger() {
   }
 }
 
+function resetDecisionInteraction() {
+  closeDecisionModal();
+  updateDecisionRuntime({ clicks: 0, sentChoice: null });
+  showCenterDanmaku('拔剑交互进度已重置');
+}
+
 function executeButtonAction(name, source) {
   const now = Date.now();
   if (runtime.lastButtonAction?.name === name && now - runtime.lastButtonAction.at < 180) return;
@@ -478,6 +1155,12 @@ function executeButtonAction(name, source) {
     case '测试中央弹幕':
       showCenterDanmaku('测试弹幕：屏幕中央显示');
       break;
+    case '开启弹幕瀑布':
+      startDanmakuWaterfall();
+      break;
+    case '关闭弹幕瀑布':
+      stopDanmakuWaterfall();
+      break;
     case '测试音乐':
       void startTrack('dream_return', { restart: true });
       break;
@@ -487,11 +1170,18 @@ function executeButtonAction(name, source) {
     case '重置媒体触发':
       void resetMediaTrigger();
       break;
+    case '测试拔剑窗口':
+      closeDecisionModal();
+      openDecisionModal({ demo: true });
+      break;
+    case '重置拔剑进度':
+      resetDecisionInteraction();
+      break;
   }
 }
 
 function registerButtons() {
-  const buttonNames = ['测试右移弹幕', '测试中央弹幕', '测试音乐', '停止音乐', '重置媒体触发'];
+  const buttonNames = ['测试右移弹幕', '测试中央弹幕', '开启弹幕瀑布', '关闭弹幕瀑布', '测试音乐', '停止音乐', '测试拔剑窗口', '重置拔剑进度', '重置媒体触发'];
 
   for (const name of buttonNames) {
     try {
@@ -523,6 +1213,7 @@ async function initialize() {
     runtime.config = config;
     return config;
   });
+  exposeMediaApi();
   await runtime.configReady;
 
   const mvu = await waitGlobalInitialized('Mvu');
@@ -541,6 +1232,8 @@ async function initialize() {
 
 function cleanup() {
   clearFade();
+  stopDanmakuWaterfall({ announce: false });
+  closeDecisionModal();
   runtime.audioUnlockCleanup?.();
   runtime.timers.forEach((timer) => window.clearTimeout(timer));
   runtime.timers.clear();
@@ -551,6 +1244,12 @@ function cleanup() {
   runtime.parentDocument?.getElementById(AUDIO_UNLOCK_BRIDGE_ID)?.remove();
   runtime.parentDocument?.getElementById(AUDIO_ID)?.remove();
   runtime.parentDocument?.getElementById(ROOT_ID)?.remove();
+  try { if (window[MEDIA_API_GLOBAL_KEY] === mediaApi) delete window[MEDIA_API_GLOBAL_KEY]; } catch (_) {}
+  try {
+    const parentWindow = runtime.parentDocument?.defaultView;
+    if (parentWindow?.[MEDIA_API_GLOBAL_KEY] === mediaApi) delete parentWindow[MEDIA_API_GLOBAL_KEY];
+  } catch (_) {}
+  mediaApi = null;
 }
 
 $(async () => {

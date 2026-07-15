@@ -1,4 +1,4 @@
-// 狐妖小红娘·王权篇部件验证器 v1.1.0
+// 狐妖小红娘·王权篇部件验证器 v1.14.0
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { access, readFile, readdir } from 'node:fs/promises';
@@ -12,7 +12,7 @@ function assert(condition, message) {
 }
 
 const filenames = (await readdir(distDir)).filter((name) => name.endsWith('.json')).sort();
-assert(filenames.length === 6, `应有 6 个构建产物，实际为 ${filenames.length}`);
+assert(filenames.length === 7, `应有 7 个构建产物，实际为 ${filenames.length}`);
 
 const parsed = new Map();
 for (const filename of filenames) {
@@ -25,19 +25,132 @@ for (const filename of filenames) {
 const worldbook = parsed.get('01-王权篇测试世界书.json');
 assert(worldbook?.entries, '世界书缺少 entries');
 const entries = Object.entries(worldbook.entries);
-assert(entries.length === 7, `世界书应有 7 条，实际为 ${entries.length}`);
+assert(entries.length === 25, `世界书应有 25 条，实际为 ${entries.length}`);
 for (const [key, entry] of entries) {
   assert(key === String(entry.uid), `世界书键 ${key} 与 uid ${entry.uid} 不一致`);
   assert(entry.excludeRecursion === true && entry.preventRecursion === true, `${entry.comment} 未双禁递归`);
 }
 const initVar = entries.map(([, entry]) => entry).find((entry) => entry.comment.startsWith('[InitVar]'));
 assert(initVar?.enabled === false && initVar?.disable === true, '[InitVar] 没有保持禁用');
-const personaController = entries.map(([, entry]) => entry).find((entry) => entry.comment.includes('阶段好感人设控制器'));
-assert(personaController?.content.startsWith('@@private'), '清瞳人设控制器必须使用 @@private 独立作用域');
-assert(personaController.content.includes('affinity < 20') && personaController.content.includes('affinity >= 80'), '清瞳人设控制器缺少好感度分段');
-assert(personaController.content.includes('低好感后期修正'), '清瞳人设控制器缺少低好感后期修正');
+const updateRules = entries.map(([, entry]) => entry).find((entry) => entry.comment.includes('变量更新规则'));
+assert(updateRules?.content.includes('王权篇变量更新规则 v1.4.1'), '变量更新规则缺少 v1.4.1 版本头');
+assert(updateRules.content.includes('每次 assistant 回复都必须输出且只输出一个完整的 <UpdateVariable> 块'), '变量规则没有强制每轮唯一 UpdateVariable');
+assert(updateRules.content.includes('<JSONPatch>[]</JSONPatch>'), '变量规则没有规定无变化时输出空 Patch');
+assert(updateRules.content.includes('严禁输出 MVU_Status、stat_data'), '变量规则没有禁止伪状态快照');
+assert(updateRules.content.includes('JSONPatch 中没有写入的值，绝不能'), '变量规则没有禁止未落库数值冒充更新');
+assert(updateRules.content.includes('不在 analysis 中单列“好感度保持不变”'), '变量规则没有修复无 Patch 的好感分析');
+const stageOutline = entries.map(([, entry]) => entry).find((entry) => entry.comment.includes('王权篇阶段剧情'));
+assert(stageOutline?.content.includes('王权篇阶段剧情 v2.1.1'), '阶段剧情缺少 v2.1.1 版本头');
+for (const plotPoint of ['师妹逼迫受伤的蜘蛛妖清瞳替她送信', '反而替她疗伤', '一次次吐出蛛丝', '暗中给他们留下生路', '吊足三天三夜', '解不开绳索上的禁制', '五花大绑、伤痕累累']) {
+  assert(stageOutline.content.includes(plotPoint), `阶段剧情缺少必经情节：${plotPoint}`);
+}
+assert(stageOutline.content.includes('父亲及家族必须完全不知道清瞳的存在'), '阶段剧情缺少父亲不知情的硬约束');
+assert(stageOutline.content.includes('不得让惩罚源于两人私会败露'), '吊树惩罚与关系败露的因果仍可能混淆');
+for (const boundary of ['只有该幕的收束事实已经在正文真实完成', '双方已经看见彼此，但尚未完成疗伤与深入交谈', '双方形成秘密再见的明确可能', '至少一次在奉命除妖时主动给妖怪留下生路', '吊树受罚、清瞳夜探、禁制无法解开']) {
+  assert(stageOutline.content.includes(boundary), `阶段剧情缺少边界约束：${boundary}`);
+}
+for (const transitionRule of ['不得把风庭云交给清瞳的送信任务误写成', '首次提出、尝试或开始以蛛丝', '蛛丝绘景已经持续一段时间', 'MVU 硬门槛只有两项', '缺失时不得阻止进入 04']) {
+  assert(updateRules.content.includes(transitionRule), `变量阶段条件缺少约束：${transitionRule}`);
+}
+const decisionTransition = updateRules.content.slice(
+  updateRules.content.indexOf('03_相知_画中山河 -> 04_决裂_此去无归:'),
+  updateRules.content.indexOf('04_决裂_此去无归 -> 05_尾声_万水千山:'),
+);
+for (const requiredGate of ['秘密关系已经被父亲或王权家族发现', '父亲已经把王权剑交到或丢到 {{user}} 面前', '最终抉择 必须仍为“尚未选择”']) {
+  assert(decisionTransition.includes(requiredGate), `进入此去无归缺少硬门槛：${requiredGate}`);
+}
+assert(!decisionTransition.includes('必须全部完成'), '进入此去无归仍错误要求完成全部旧剧情节点');
+const wangquanBayePersona = entries.map(([, entry]) => entry).find((entry) => entry.comment.includes('配角人设·王权霸业'));
+assert(wangquanBayePersona?.content.includes('王权霸业配角人设 v1.1.0'), '王权霸业人设缺少 v1.1.0 版本头');
+assert(wangquanBayePersona.constant === false && wangquanBayePersona.enabled === true, '王权霸业人设应为启用的关键词触发条目');
+for (const key of ['王权霸业', '王权家主', '富贵的父亲', '父亲', '东方淮竹']) {
+  assert(wangquanBayePersona.key.includes(key), `王权霸业人设缺少触发词：${key}`);
+}
+assert(wangquanBayePersona.content.includes('完全不知道清瞳存在'), '王权霸业人设缺少前期不知情约束');
+assert(wangquanBayePersona.content.includes('不是虚假的爱情测试'), '王权霸业人设弱化了大殿杀死清瞳的真实命令');
+assert(wangquanBayePersona.content.includes('她的死亡不得归因于妖族'), '王权霸业人设没有排除错误的淮竹死亡因果');
+assert(wangquanBayePersona.content.includes('两条不同的因果线'), '王权霸业人设没有分离淮竹之死与清瞳妖族身份');
+assert(!wangquanBayePersona.content.includes('东方淮竹的死亡由妖族造成'), '王权霸业人设仍残留错误的妖族致死设定');
+assert(wangquanBayePersona.content.includes('自己为了阻止旧悲剧，已经成为新悲剧的制造者'), '王权霸业人设缺少悲剧循环解释');
+const fengTingyunPersona = entries.map(([, entry]) => entry).find((entry) => entry.comment.includes('配角人设·风庭云'));
+assert(fengTingyunPersona?.content.includes('风庭云配角人设 v1.1.0'), '风庭云人设缺少 v1.1.0 版本头');
+assert(fengTingyunPersona.constant === false && fengTingyunPersona.enabled === true, '风庭云人设应为启用的关键词触发条目');
+for (const key of ['风庭云', '风师妹', '师妹', '王权富贵的师妹']) {
+  assert(fengTingyunPersona.key.includes(key), `风庭云人设缺少触发词：${key}`);
+}
+assert(fengTingyunPersona.excludeRecursion === true && fengTingyunPersona.preventRecursion === true, '风庭云人设必须双禁递归');
+assert(fengTingyunPersona.content.includes('她明确暗恋{{user}}'), '风庭云人设缺少少女钦慕设定');
+assert(fengTingyunPersona.content.includes('不得删去、否认或弱化成纯粹同门情谊'), '风庭云暗恋缺少剧情硬约束');
+assert(fengTingyunPersona.content.includes('不得仅凭暗恋突然变成残酷施虐者'), '风庭云暗恋缺少防恶毒雌竞约束');
+assert(fengTingyunPersona.content.includes('不知道清瞳与{{user}}长期往来'), '风庭云人设缺少前期信息边界');
+const dongfangYuechuPersona = entries.map(([, entry]) => entry).find((entry) => entry.comment.includes('男三人设·东方月初'));
+assert(dongfangYuechuPersona?.content.includes('东方月初男三人设 v1.0.0'), '东方月初人设缺少 v1.0.0 版本头');
+assert(dongfangYuechuPersona.constant === false && dongfangYuechuPersona.enabled === true, '东方月初人设应为启用的关键词触发条目');
+for (const key of ['东方月初', '月初', '东方公子', '东方盟主', '富贵的表弟']) {
+  assert(dongfangYuechuPersona.key.includes(key), `东方月初人设缺少触发词：${key}`);
+}
+assert(dongfangYuechuPersona.excludeRecursion === true && dongfangYuechuPersona.preventRecursion === true, '东方月初人设必须双禁递归');
+assert(dongfangYuechuPersona.content.includes('东方月初为表弟'), '东方月初与王权富贵的亲缘关系错误');
+assert(dongfangYuechuPersona.content.includes('不得提前当作随手可用的常规技能'), '东方月初能力缺少时期约束');
+assert(dongfangYuechuPersona.content.includes('不能让他凭空知道'), '东方月初缺少非全知信息边界');
+assert(dongfangYuechuPersona.content.includes('不能抢走王权富贵与清瞳'), '东方月初缺少男三叙事边界');
+const tushanHonghongPersona = entries.map(([, entry]) => entry).find((entry) => entry.comment.includes('重要配角人设·涂山红红'));
+assert(tushanHonghongPersona?.content.includes('涂山红红重要配角人设 v1.0.0'), '涂山红红人设缺少 v1.0.0 版本头');
+assert(tushanHonghongPersona.constant === false && tushanHonghongPersona.enabled === true, '涂山红红人设应为启用的关键词触发条目');
+for (const key of ['涂山红红', '红红姐', '涂山之主', '妖盟盟主', '狐妖之王']) {
+  assert(tushanHonghongPersona.key.includes(key), `涂山红红人设缺少触发词：${key}`);
+}
+assert(tushanHonghongPersona.excludeRecursion === true && tushanHonghongPersona.preventRecursion === true, '涂山红红人设必须双禁递归');
+assert(tushanHonghongPersona.content.includes('误杀小道士'), '涂山红红人设缺少核心愧疚来源');
+assert(tushanHonghongPersona.content.includes('人妖和平不等于纵容妖族'), '涂山红红人设缺少和平理念边界');
+assert(tushanHonghongPersona.content.includes('不得因此写成对一切攻击'), '涂山红红能力缺少非无敌边界');
+assert(tushanHonghongPersona.content.includes('她无法凭空知道'), '涂山红红缺少非全知信息边界');
+assert(tushanHonghongPersona.content.includes('不能把前者误写成爱情'), '涂山红红与小道士、东方月初的感情关系混淆');
+const worldCore = entries.map(([, entry]) => entry).find((entry) => entry.comment.includes('世界观·人妖秩序与悲剧底色'));
+assert(worldCore?.constant === true && worldCore.enabled === true, '世界底色应为启用的常驻条目');
+assert(worldCore.content.includes('王权篇世界底色 v1.0.0'), '世界底色缺少 v1.0.0 版本头');
+assert(worldCore.content.includes('不混用真人改编设定'), '世界底色没有锁定漫画／动画基准');
+assert(worldCore.content.includes('原作结局不得强行纠正玩家选择'), '世界底色缺少玩家支线优先级');
+assert(worldCore.content.includes('悲剧通过门规、沉默、伤痕、错过'), '世界底色缺少克制的悲剧叙事约束');
+const factionComments = ['一气道盟', '王权世家', '东方灵族', '涂山', '南国', '北山', '西西域', '傲来国'];
+for (const factionName of factionComments) {
+  const faction = entries.map(([, entry]) => entry).find((entry) => entry.comment === `[mvu_plot]势力·${factionName}`);
+  assert(faction?.constant === false && faction.enabled === true, `${factionName} 应为启用的关键词触发条目`);
+  assert(faction.key.length > 0, `${factionName} 缺少触发词`);
+  assert(faction.excludeRecursion === true && faction.preventRecursion === true, `${factionName} 必须双禁递归`);
+  assert(faction.content.includes('v1.0.0'), `${factionName} 缺少 v1.0.0 版本头`);
+}
+const wangquanFaction = entries.map(([, entry]) => entry).find((entry) => entry.comment === '[mvu_plot]势力·王权世家');
+for (const lore of ['王权剑', '王权剑意', '天地一剑', '家族剑阵、禁制与戒律']) {
+  assert(wangquanFaction.content.includes(lore), `王权世家缺少代表手段：${lore}`);
+}
+const dongfangFaction = entries.map(([, entry]) => entry).find((entry) => entry.comment === '[mvu_plot]势力·东方灵族');
+assert(dongfangFaction.content.includes('纯质阳炎') && dongfangFaction.content.includes('东方灵血'), '东方灵族缺少阳炎或灵血设定');
+assert(dongfangFaction.content.includes('不得杜撰“东方淮竹死于妖族”'), '东方灵族没有排除淮竹死亡错误设定');
+const aolaiFaction = entries.map(([, entry]) => entry).find((entry) => entry.comment === '[mvu_plot]势力·傲来国');
+assert(aolaiFaction.content.includes('不在当前世界观条目提前解释圈外、黑狐'), '傲来国条目缺少高层秘密防剧透边界');
+const personaController = entries.map(([, entry]) => entry).find((entry) => entry.comment.includes('清瞳好感人设控制器'));
+assert(!personaController?.content.startsWith('@@private'), 'await getwi 控制器不得使用 @@private 同步 IIFE');
+assert(personaController.content.includes('清瞳好感人设控制器 v2.0.1'), '清瞳人设控制器缺少部件版本');
+assert(personaController.content.includes('affinityProfiles') && personaController.content.includes('affinity >= profile.min'), '清瞳人设控制器缺少好感度分段');
+assert(!personaController.content.includes('剧情.当前阶段'), '清瞳人设控制器不得读取剧情阶段');
+assert(!personaController.content.includes('stageRules') && !personaController.content.includes('修正'), '清瞳人设控制器仍残留剧情修正逻辑');
+assert(personaController.content.includes('await getwi') && personaController.content.includes('affinityProfile.entry'), '清瞳人设控制器没有集中读取好感槽位');
+const personaSlots = entries.map(([, entry]) => entry).filter((entry) => entry.comment.includes('好感人设槽位'));
+assert(personaSlots.length === 5, `好感人设槽位应有 5 条，实际为 ${personaSlots.length}`);
+for (const slot of personaSlots) {
+  assert(slot.enabled === false && slot.disable === true && slot.constant === false, `${slot.comment} 必须禁用并仅供总控读取`);
+  assert(slot.content.startsWith('<%_ /* 清瞳好感人设槽位 v2.0.0 */ _%>'), `${slot.comment} 缺少非输出版本头`);
+}
 assert(initVar.content.includes('好感度: 5'), 'InitVar 缺少初始好感度');
 assert(initVar.content.includes('心声:'), 'InitVar 缺少清瞳心声');
+const plotGuide = entries.map(([, entry]) => entry).find((entry) => entry.comment.includes('王权篇演绎指南'));
+assert(plotGuide?.content.includes('王权篇演绎指南 v1.2.1'), '演绎指南缺少 v1.2.1 版本头');
+assert(plotGuide.content.includes('不在正文末尾输出 MVU_Status'), '演绎指南没有禁止伪状态快照');
+const statusbarProtocol = entries.map(([, entry]) => entry).find((entry) => entry.comment.includes('状态栏输出协议'));
+assert(statusbarProtocol?.content.includes('王权篇状态栏输出协议 v1.1.0'), '状态栏协议缺少 v1.1.0 版本头');
+assert(statusbarProtocol.content.includes('严禁输出 `MVU_Status:`'), '状态栏协议没有禁止 MVU_Status');
+assert(statusbarProtocol.content.includes('其后不得追加状态数据'), '状态栏协议没有锁定最终输出顺序');
 
 for (const filename of filenames.slice(1)) {
   const script = parsed.get(filename);
@@ -46,10 +159,52 @@ for (const filename of filenames.slice(1)) {
   assert(typeof script.content === 'string' && script.content.length > 0, `${filename} content 为空`);
 }
 
+const scriptIds = filenames.slice(1).map((filename) => parsed.get(filename).id);
+assert(new Set(scriptIds).size === scriptIds.length, '脚本 UUID 存在重复');
+
 const configScript = parsed.get('04-王权篇媒体资源配置.json');
 const controllerScript = parsed.get('05-王权篇顶层弹幕与音乐.json');
 const statusbarScript = parsed.get('06-王权篇状态栏控制器.json');
+const bullethellScript = parsed.get('07-王权篇无尽剑幕试炼.json');
+for (const [filename, script] of [
+  ['05-王权篇顶层弹幕与音乐.json', controllerScript],
+  ['07-王权篇无尽剑幕试炼.json', bullethellScript],
+]) {
+  const parseableContent = script.content.replace(/\nexport\s*\{\s*\};?\s*$/, '\n');
+  try {
+    new Function(parseableContent);
+  } catch (error) {
+    throw new Error(`${filename} 内嵌脚本语法错误：${error.message}`);
+  }
+}
 const mediaConfig = configScript.data.mediaConfig;
+assert(controllerScript.content.includes('控制器 v2.4.0'), '媒体控制器缺少 v2.4.0 版本头');
+assert(controllerScript.content.includes("const MEDIA_API_GLOBAL_KEY = '__HYXHN_WANGQUAN_MEDIA_API__'"), '媒体控制器缺少共享音乐 API 键');
+assert(controllerScript.content.includes('initializeGlobal(MEDIA_API_GLOBAL_KEY, mediaApi)'), '媒体控制器没有通过 initializeGlobal 公开音乐 API');
+for (const apiName of ['getState()', 'playTrack(trackKey', 'stopMusic: () => stopMusic()']) {
+  assert(controllerScript.content.includes(apiName), `媒体控制器共享 API 缺少：${apiName}`);
+}
+assert(controllerScript.content.includes("{ color: '#f2d400'") && controllerScript.content.includes("{ color: '#007a32'") && controllerScript.content.includes("{ color: '#f2f2f2'"), '弹幕缺少明黄、深绿或白色色板');
+assert(controllerScript.content.includes('saturate(1.36) brightness(.98) contrast(1.12)'), '弹幕瀑布明度与饱和度不符合设定');
+assert(!controllerScript.content.includes('0 0 5px var(--hyxhn-danmaku-glow') && !controllerScript.content.includes('0 0 6px var(--hyxhn-danmaku-glow'), '弹幕仍残留彩色外发光');
+assert(controllerScript.content.includes('width: min(72vw, 760px)') && controllerScript.content.includes('`${49 + Math.random() * 2}%`'), '中央弹幕版心或横向偏移没有进一步收窄');
+assert(controllerScript.content.includes('-webkit-text-stroke: 1px rgba(0, 0, 0, .96)') && controllerScript.content.includes('paint-order: stroke fill'), '弹幕缺少黑色字缘包裹');
+assert(controllerScript.content.includes('top: Math.random() * 98') && controllerScript.content.includes('options.top ?? Math.random() * 98'), '滚动弹幕纵向轨道没有铺满完整视口');
+assert(!controllerScript.content.includes('@keyframes hyxhn-danmaku-center-in'), '中央弹幕仍带入场或出场动画');
+assert(controllerScript.content.includes('function placeCenterDanmaku(node)'), '中央弹幕缺少自动避让排版');
+assert(controllerScript.content.includes('function placeWaterfallCenterDanmaku(node)') && controllerScript.content.includes('candidatePool') && controllerScript.content.includes('gap.start + gap.size'), '瀑布中央弹幕缺少随机间隙填充排版');
+assert(controllerScript.content.includes('scheduleWaterfall(centerLoop, 30 + Math.random() * 15)'), '瀑布中央弹幕发射速度没有提升');
+assert(!controllerScript.content.includes('trimWaterfallNodes'), '弹幕瀑布仍残留节点数量裁剪上限');
+assert(controllerScript.content.includes("const WATERFALL_TEXT = '如果我们能活着出去的话，万水千山，你愿意陪我一起看吗?'"), '瀑布测试文本没有统一为指定台词');
+assert(controllerScript.content.includes("case '开启弹幕瀑布'") && controllerScript.content.includes("case '关闭弹幕瀑布'"), '弹幕瀑布缺少开启或关闭控制');
+for (const buttonName of ['开启弹幕瀑布', '关闭弹幕瀑布']) {
+  assert(controllerScript.button.buttons.some((button) => button.name === buttonName), `媒体控制器缺少按钮：${buttonName}`);
+}
+assert(controllerScript.content.includes('data:image/jpeg;base64,'), '媒体控制器缺少内嵌王权剑图标');
+assert(!controllerScript.content.includes('__HYXHN_SWORD_ICON_DATA_URL__'), '媒体控制器仍残留王权剑图标占位符');
+assert(controllerScript.content.includes('hyxhn-sword-image-frame'), '拔剑窗口缺少旋转剑图容器');
+assert(controllerScript.content.includes("clicks * 45"), '拔剑图标缺少八次一周的进度旋转');
+assert(controllerScript.content.includes('一封被逼送来的信') && controllerScript.content.includes('被吊上树梢受罚'), '前期剧情弹幕仍与阶段大纲冲突');
 assert(controllerScript.content.includes(configScript.id), '控制器没有引用独立媒体配置脚本 ID');
 const initializeSource = controllerScript.content.slice(controllerScript.content.indexOf('async function initialize()'));
 assert(
@@ -61,16 +216,76 @@ assert(
   '测试按钮必须在等待媒体配置前注册',
 );
 assert(controllerScript.content.includes("addEventListener('click', clickHandler, true)"), '缺少顶层按钮点击捕获兜底');
+assert(controllerScript.content.includes("const DECISION_REQUIRED_CLICKS = 8"), '拔剑交互必须为 8 次点击');
+for (const thought of ['人和妖……真的不能和平相处吗？', '父亲说的，就一定是对的吗？', '如果服从，我还是我吗？', '她也会疼，也会害怕。', '这把剑，是为了杀妖，还是为了守护？', '我挥出的每一剑，都只能由别人决定吗？', '若连眼前的人都救不了，力量又有什么意义？', '这一次……我要自己选择。']) {
+  assert(controllerScript.content.includes(thought), `拔剑交互缺少思考弹幕：${thought}`);
+}
+assert(controllerScript.content.includes("stage === DECISION_STAGE && decision === '尚未选择'"), '拔剑窗口缺少阶段与未选择双条件');
+assert(controllerScript.content.includes("createChatMessages([{ role: 'user', message: choice.message }]") && controllerScript.content.includes("triggerSlash('/trigger')"), '选择没有自动创建玩家消息并触发生成');
+for (const choice of ['杀掉清瞳', '弃剑', '持剑救走清瞳']) {
+  assert(controllerScript.content.includes(`value: '${choice}'`), `拔剑交互缺少选择：${choice}`);
+}
+assert(controllerScript.content.includes('测试模式：选择不会发送消息或改变剧情。'), '拔剑窗口缺少安全测试模式');
 assert(mediaConfig.assetBaseUrl === 'http://127.0.0.1:8123/', '本地测试 base URL 异常');
 assert(mediaConfig.tracks?.dream_return?.src, '缺少 dream_return 曲目配置');
 assert(statusbarScript.content.includes("'[data-hyxhn-statusbar-mount]'"), '状态栏控制器缺少挂载点选择器');
 assert(statusbarScript.content.includes('attachShadow'), '状态栏控制器未使用 Shadow DOM');
+assert(statusbarScript.content.includes('剧情.最终抉择') && statusbarScript.content.includes('05_结局_无心之剑'), '状态栏缺少最终抉择或独立结局显示');
 assert(!statusbarScript.content.includes('__HYXHN_STATUSBAR_HTML__'), '状态栏 HTML 构建占位符未替换');
+assert(bullethellScript?.name === '07-王权篇无尽剑幕试炼', '无尽剑幕脚本名称异常');
+assert(bullethellScript.id === 'b43d8e5a-29f2-4ba0-9b76-5ee381f3f6c7', '无尽剑幕脚本 UUID 异常');
+assert(bullethellScript.button.enabled === true && bullethellScript.button.buttons.length === 1, '无尽剑幕必须只有一个正式启动按钮');
+assert(bullethellScript.button.buttons[0].name === '开始无尽剑幕试炼', '无尽剑幕启动按钮名称异常');
+for (const marker of [
+  'const MAX_LIVES = 8',
+  'const INVULNERABLE_SECONDS = 1.2',
+  'const POST_THIRTY_LAYER_SECONDS = 12',
+  "const layerKinds = ['cross', 'spiral', 'curtain', 'wideAim', 'expandingRing', 'edgeSweep']",
+  "addEmitter('rain', 0, 0.62)",
+  "addEmitter('aimed3', 10, 1.8)",
+  "addEmitter('ring', 20, 2.5)",
+  "createChatMessages([{ role: 'user', message: result.message }])",
+  "triggerSlash('/trigger')",
+  "const CHAT_STATE_KEY = 'hyxhn_bullethell_runtime'",
+  "touch-action:none",
+  "setPointerCapture(event.pointerId)",
+]) {
+  assert(bullethellScript.content.includes(marker), `无尽剑幕缺少实现标记：${marker}`);
+}
+assert(!bullethellScript.content.includes('stat_data'), '无尽剑幕不得直接读写 stat_data');
+assert(bullethellScript.content.includes('离屏') || bullethellScript.content.includes('BULLET_MARGIN'), '无尽剑幕缺少离屏弹体回收');
+assert(bullethellScript.content.includes('MAX_EMITTER_CATCHUP = 4'), '无尽剑幕缺少单帧补发限制');
+assert(bullethellScript.content.includes('visibilitychange') && bullethellScript.content.includes('orientationchange'), '无尽剑幕缺少后台暂停或横竖屏处理');
+assert(bullethellScript.content.includes('deliveryStage') && bullethellScript.content.includes('pendingResult'), '无尽剑幕缺少防重复发送状态机');
+
+const simulatedLayerAt = (seconds) => seconds < 30 ? 1 : Math.floor((seconds - 30) / 12) + 2;
+const simulatedEmitterCount = (seconds) => 3 + (seconds < 30 ? 0 : Math.floor((seconds - 30) / 12) + 1);
+const simulation = Array.from({ length: 301 }, (_, seconds) => ({
+  seconds,
+  layer: simulatedLayerAt(seconds),
+  emitters: simulatedEmitterCount(seconds),
+  speedScale: 1 + 0.03 * (simulatedLayerAt(seconds) - 1),
+  intervalScale: Math.max(0.35, 1 - 0.04 * (simulatedLayerAt(seconds) - 1)),
+}));
+assert(simulation[0].layer === 1 && simulation[29].emitters === 3, '前三十秒难度模拟异常');
+assert(simulation[30].layer === 2 && simulation[30].emitters === 4, '三十秒首个叠加发射器模拟异常');
+assert(simulation[42].layer === 3 && simulation[42].emitters === 5, '十二秒波次叠加模拟异常');
+assert(simulation[300].layer > simulation[180].layer && simulation[300].emitters > simulation[180].emitters, '五分钟难度没有继续增长');
+assert(simulation[300].speedScale > simulation[180].speedScale && simulation[300].intervalScale >= 0.35, '五分钟弹速或间隔缩放异常');
 await access(path.join(projectRoot, mediaConfig.tracks.dream_return.src));
 
 const schemaScript = parsed.get('03-王权篇变量结构.json');
-const stages = [...schemaScript.content.matchAll(/'([0-5]{2}_[^']+)'/g)].map((match) => match[1]);
-assert(stages.length === 6 && new Set(stages).size === 6, 'Schema 剧情阶段枚举异常');
+const loaderScript = parsed.get('02-王权篇MVU加载器.json');
+assert(loaderScript.content.includes('__VUE_PROD_DEVTOOLS__'), 'MVU 加载器缺少 Luker 的 Vue/Pinia 兼容标志');
+const stageBlock = schemaScript.content.slice(schemaScript.content.indexOf('const STAGES = ['), schemaScript.content.indexOf('];', schemaScript.content.indexOf('const STAGES = [')));
+const stages = [...stageBlock.matchAll(/'([0-5]{2}_[^']+)'/g)].map((match) => match[1]);
+assert(stages.length === 7 && new Set(stages).size === 7, 'Schema 剧情阶段枚举异常');
+assert(schemaScript.content.includes("const DECISIONS = ['尚未选择', '杀掉清瞳', '弃剑', '持剑救走清瞳']"), 'Schema 最终抉择枚举异常');
+assert(schemaScript.content.includes("value === '04_决裂_出逃山庄' ? '04_决裂_此去无归'"), 'Schema 缺少旧存档阶段迁移');
+assert(initVar.content.includes('最终抉择: 尚未选择'), 'InitVar 缺少最终抉择初值');
+for (const range of ['00-19', '20-39', '40-59', '60-79', '80-100']) {
+  assert(personaController.content.includes(`'[mvu_plot]清瞳好感人设槽位·${range}'`), `总控缺少好感槽位映射：${range}`);
+}
 assert(schemaScript.content.includes('好感度') && schemaScript.content.includes('_.clamp'), 'Schema 缺少好感度 0..100 约束');
 for (const stage of stages) {
   assert(controllerScript.content.includes(`'${stage}'`), `控制器缺少阶段事件：${stage}`);
@@ -78,10 +293,22 @@ for (const stage of stages) {
 }
 
 console.log('验证通过：');
-console.log('- 6 个 JSON 均可解析，脚本字段完整');
-console.log('- 世界书 7 条 uid 对齐，[InitVar] 禁用，条目双禁递归');
-console.log('- 六个 MVU 阶段、好感度约束与双条件人设控制器一致');
+console.log('- 7 个 JSON 均可解析，内嵌脚本语法正确且 UUID 唯一');
+console.log('- 世界书 25 条 uid 对齐，[InitVar] 禁用，条目双禁递归');
+console.log('- 王权霸业采用独立关键词人设条目，兼顾严父、家主与大殿抉择约束');
+console.log('- 风庭云采用轻量关键词人设条目，只承担送信与山庄日常配角职责');
+console.log('- 东方月初采用完整男三关键词人设，保留亲缘、能力、理想与非全知边界');
+console.log('- 涂山红红采用重要配角关键词人设，兼顾妖盟责任、和平理想、愧疚与感情边界');
+console.log('- 世界底色常驻；一气道盟、王权、东方、涂山、南国、北山、西西域、傲来国按关键词触发');
+console.log('- 每轮强制唯一 UpdateVariable，禁止 MVU_Status 伪快照与未落库好感数值');
+console.log('- 六幕剧情在第五幕分为万水千山与无心之剑，媒体与状态栏映射完整');
+console.log('- 前四阶段严格按送信、疗伤绘景、日常放妖、吊树夜探与关系败露推进');
+console.log('- 单一 EJS 总控仅按好感度读取五个禁用的人设内容槽位');
+console.log('- 此去无归仅在阶段命中且尚未选择时开启，八次拔剑后三选一并自动发送');
 console.log('- 媒体配置独立，控制器未写死本机绝对路径');
 console.log('- 弹幕层与测试按钮先于媒体配置等待初始化，并具备顶层点击兜底');
 console.log('- 状态栏以 scoped 挂载点 + Shadow DOM 渲染，静态模板已内嵌');
+console.log('- 无尽剑幕为独立脚本，八条生命、后台暂停、无限波次、结果去重发送链完整');
+console.log('- 五分钟难度模拟确认发射器、层数与弹速持续增长');
 console.log('- 本地测试音乐文件存在');
+console.log('- MVU 加载器包含 Luker 所需的 Vue/Pinia 兼容标志');

@@ -1,4 +1,5 @@
-// ═══ 狐妖小红娘·王权篇 Schema v1.1.0 ═══
+// ═══ 狐妖小红娘·王权篇 Schema v1.2.0 ═══
+// v1.2.0: 出逃山庄更名为此去无归；新增最终抉择与无心之剑独立结局阶段。
 // v1.1.0: 收敛为剧情、时间、地点、清瞳状态、好感度与心声六项状态。
 let registerMvuSchema;
 try {
@@ -13,9 +14,12 @@ const STAGES = [
   '01_任务_蛛网疑影',
   '02_初遇_笼中清瞳',
   '03_相知_画中山河',
-  '04_决裂_出逃山庄',
+  '04_决裂_此去无归',
   '05_尾声_万水千山',
+  '05_结局_无心之剑',
 ];
+
+const DECISIONS = ['尚未选择', '杀掉清瞳', '弃剑', '持剑救走清瞳'];
 
 const str = (fallback = '') => z.preprocess(
   value => (value === undefined || value === null || value === '' ? fallback : String(value)),
@@ -24,7 +28,11 @@ const str = (fallback = '') => z.preprocess(
 
 export const Schema = z.object({
   剧情: z.object({
-    当前阶段: z.enum(STAGES).prefault(STAGES[0]).catch(STAGES[0]),
+    当前阶段: z.preprocess(
+      value => (value === '04_决裂_出逃山庄' ? '04_决裂_此去无归' : value),
+      z.enum(STAGES),
+    ).prefault(STAGES[0]).catch(STAGES[0]),
+    最终抉择: z.enum(DECISIONS).prefault(DECISIONS[0]).catch(DECISIONS[0]),
     时间: str('暮色将临'),
     地点: str('王权山庄·演武场'),
   }).prefault({}).catch({}),

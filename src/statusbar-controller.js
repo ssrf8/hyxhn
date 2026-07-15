@@ -1,4 +1,5 @@
-// 狐妖小红娘·王权篇状态栏控制器 v1.0.0
+// 狐妖小红娘·王权篇状态栏控制器 v1.1.0
+// v1.1.0: 显示此去无归与最终抉择分支。
 // scoped 正则只投放安全挂载点，本脚本以 Shadow DOM 渲染并读取挂载点所在楼层的 MVU。
 const STATUSBAR_HTML = __HYXHN_STATUSBAR_HTML__;
 const MOUNT_SELECTOR = '[data-hyxhn-statusbar-mount]';
@@ -9,8 +10,9 @@ const STAGE_NAMES = Object.freeze({
   '01_任务_蛛网疑影': '任务 · 蛛网疑影',
   '02_初遇_笼中清瞳': '初遇 · 笼中清瞳',
   '03_相知_画中山河': '相知 · 画中山河',
-  '04_决裂_出逃山庄': '决裂 · 出逃山庄',
+  '04_决裂_此去无归': '决裂 · 此去无归',
   '05_尾声_万水千山': '尾声 · 万水千山',
+  '05_结局_无心之剑': '结局 · 无心之剑',
 });
 
 function parentDocument() {
@@ -52,15 +54,19 @@ function render(mount, root) {
   try {
     const data = getMessageData(messageIdOf(mount));
     const stat = data.stat_data || {
-      剧情: { 当前阶段: '00_序章_道门兵人', 时间: '暮色将临', 地点: '王权山庄·演武场' },
+      剧情: { 当前阶段: '00_序章_道门兵人', 最终抉择: '尚未选择', 时间: '暮色将临', 地点: '王权山庄·演武场' },
       清瞳: { 状态: '未正式现身，正在暗处侦察王权山庄', 好感度: 5, 心声: '王权家的兵器……最好不要惊动他。' },
     };
     const stage = _.get(stat, '剧情.当前阶段', '00_序章_道门兵人');
     const affinity = _.clamp(Math.round(Number(_.get(stat, '清瞳.好感度', 5)) || 0), 0, 100);
+    const decision = _.get(stat, '剧情.最终抉择', '尚未选择');
     write(root, 'stage', STAGE_NAMES[stage] || stage);
     write(root, 'time', _.get(stat, '剧情.时间'));
     write(root, 'location', _.get(stat, '剧情.地点'));
     write(root, 'qing-status', _.get(stat, '清瞳.状态'), '暂无状态记录');
+    write(root, 'decision', decision, '尚未选择');
+    const decisionSection = root.getElementById('decision-section');
+    if (decisionSection) decisionSection.hidden = decision === '尚未选择' && stage !== '04_决裂_此去无归';
     write(root, 'thought', _.get(stat, '清瞳.心声'), '……');
     write(root, 'affinity-label', affinityName(affinity));
     write(root, 'affinity-value', `${affinity} / 100`);

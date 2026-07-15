@@ -1,4 +1,4 @@
-王权篇状态栏输出协议 v1.0.0
+王权篇状态栏输出协议 v1.1.0
 
 每次 assistant 回复都必须在全部正文与 <UpdateVariable> 块之后，另起一行只输出一次：
 <StatusPlaceHolderImpl/>
@@ -8,3 +8,7 @@
   - 不得解释占位符，不得改名，不得添加属性
   - 即使本轮变量没有变化，也必须输出
   - 状态栏内容由前端读取 MVU 变量渲染，正文不要重复罗列字段和值
+  - 占位符之前必须已经输出且只输出一个完整 <UpdateVariable> 块；无变化时该块使用空 JSONPatch
+  - 严禁输出 `MVU_Status:`、`stat_data:`、手写 JSON 状态快照或好感度摘要
+  - 不得根据“准备写入”的值预演状态；只有 JSONPatch 成功落库后的变量才是真实状态
+  - <StatusPlaceHolderImpl/> 必须是回复中的最后一个结构化标记；其后不得追加状态数据

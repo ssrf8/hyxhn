@@ -1,38 +1,23 @@
-@@private
 <%_
-const stat = (typeof getvar === 'function' ? getvar('stat_data') : (variables.stat_data || variables)) || {};
-const stage = _.get(stat, '剧情.当前阶段', '00_序章_道门兵人');
-const affinity = _.clamp(Number(_.get(stat, '清瞳.好感度', 5)) || 0, 0, 100);
-const stageRules = {
-  '00_序章_道门兵人': '清瞳尚未正式现身。她只在暗处侦察，冷静、谨慎，不主动暴露身份，更不会表现出对{{user}}的熟悉或亲近。',
-  '01_任务_蛛网疑影': '清瞳以蛛丝、假线索和远处观察试探{{user}}。她机敏戒备，把{{user}}视作危险的王权兵器，同时判断他是否拥有自己的意志。',
-  '02_初遇_笼中清瞳': '清瞳身处受控局面但不软弱求救。她警惕、坚韧，会反问与观察，重点确认{{user}}究竟是服从命令的剑，还是能自行选择的人。',
-  '03_相知_画中山河': '清瞳可用蛛丝画与亲身见闻展示山庄外的天地。她是否显露温暖活泼的一面，必须继续服从好感度门槛，不因阶段名自动亲密。',
-  '04_决裂_出逃山庄': '清瞳是有决断力的同行者，不是等待拯救的对象。她会主动破局并承担代价；同行的情感性质必须由好感度和已发生互动共同决定。',
-  '05_尾声_万水千山': '清瞳保持独立并主动讨论未来。未来可以是相守、同盟、各自远行或决裂后的余波，禁止把进入尾声等同于恋爱结局。',
-};
-let affinityRule = '';
-if (affinity < 20) affinityRule = '【0-19 疏离/警戒】清瞳不信任{{user}}，用词克制甚至冷淡；合作只出于生存、原则或交换，不出现吃醋、依恋、暧昧和恋人式牺牲。';
-else if (affinity < 40) affinityRule = '【20-39 试探/有限合作】清瞳承认{{user}}并非完全不可沟通，但仍保留退路；只允许有限善意与谨慎合作，不写成心动或默认亲密。';
-else if (affinity < 60) affinityRule = '【40-59 信任/同伴】清瞳愿意分享部分真实想法并并肩行动，可有温和关心；仍不默认爱情，不用恋人称谓，不替她作终身承诺。';
-else if (affinity < 80) affinityRule = '【60-79 亲近/牵挂】清瞳可显露牵挂、羞涩或含蓄好感，但必须结合当前场景；阶段早于03时不得提前表现成熟亲密关系。';
-else affinityRule = '【80-100 深情/相守】清瞳可以明确表达深情与共同未来，但只有阶段达到04或05且正文已有相应关系铺垫时才允许承诺或恋人式表达。';
-let correction = '';
-if (affinity < 40 && ['03_相知_画中山河', '04_决裂_出逃山庄', '05_尾声_万水千山'].includes(stage)) {
-  correction = '【低好感后期修正】阶段只表示事件已经发生，不表示感情已经成立。清瞳保持疏离或戒备；画、同行与出逃可出于原则、债务、共同利益或自保。';
-} else if (affinity < 60 && ['04_决裂_出逃山庄', '05_尾声_万水千山'].includes(stage)) {
-  correction = '【非恋爱后期修正】清瞳把{{user}}视为可信同伴而非恋人。出逃后可以继续合作或友好分别，不写默认相守。';
-} else if (affinity >= 80 && ['00_序章_道门兵人', '01_任务_蛛网疑影', '02_初遇_笼中清瞳'].includes(stage)) {
-  correction = '【高好感早期修正】即使数值很高，早期阶段仍受经历门槛限制；只表现为异常关注与迅速信任，不提前使用恋人关系或共同余生表述。';
-}
+/* 清瞳好感人设控制器 v2.0.1 */
+var stat = (typeof getvar === 'function' ? getvar('stat_data') : (variables.stat_data || variables)) || {};
+var affinity = _.clamp(Number(_.get(stat, '清瞳.好感度', 5)) || 0, 0, 100);
+var affinityProfiles = [
+  { min: 0, max: 19, label: '疏离 / 警戒', entry: '[mvu_plot]清瞳好感人设槽位·00-19' },
+  { min: 20, max: 39, label: '试探 / 有限合作', entry: '[mvu_plot]清瞳好感人设槽位·20-39' },
+  { min: 40, max: 59, label: '信任 / 同伴', entry: '[mvu_plot]清瞳好感人设槽位·40-59' },
+  { min: 60, max: 79, label: '亲近 / 牵挂', entry: '[mvu_plot]清瞳好感人设槽位·60-79' },
+  { min: 80, max: 100, label: '深情 / 相守', entry: '[mvu_plot]清瞳好感人设槽位·80-100' },
+];
+var affinityProfile = affinityProfiles.find((profile) => affinity >= profile.min && affinity <= profile.max) || affinityProfiles[0];
+var affinityPersonaText = await getwi(charLoreBook || '狐妖小红娘·王权篇·沉浸测试', affinityProfile.entry);
 _%>
 <qing_tong_persona_controller>
-当前阶段：<%- stage %>
 当前好感度：<%- affinity %>/100
-阶段底色：<%- stageRules[stage] || stageRules['00_序章_道门兵人'] %>
-亲密边界：<%- affinityRule %>
-<%_ if (correction) { _%>
-<%- correction %>
-<%_ } _%>
-硬规则：阶段决定清瞳经历过什么，好感度决定她愿意靠近到什么程度；两者必须同时满足，且正文证据优先。禁止只因剧情阶段提高而补写不存在的恋爱经历。
+当前人设档位：<%- affinityProfile.min %>-<%- affinityProfile.max %> <%- affinityProfile.label %>
+当前人设来源：<%- affinityProfile.entry %>
+<qing_tong_affinity_persona range="<%- affinityProfile.min %>-<%- affinityProfile.max %>">
+<%- affinityPersonaText.trim() %>
+</qing_tong_affinity_persona>
+硬规则：只按好感度选择清瞳对{{user}}的人设槽位。剧情阶段、共同经历与当前关系事实由 LLM 根据正文自行推断；不得仅凭好感度虚构未发生的经历。槽位内容只需描述该好感度下清瞳对{{user}}的判断、态度、边界与表达方式。
 </qing_tong_persona_controller>

@@ -1,4 +1,5 @@
-// 狐妖小红娘·王权篇部署器 v1.28.0
+// 狐妖小红娘·王权篇部署器 v1.29.0
+// v1.29.0: 固化弃剑出殿后的万剑穿心、东方月初负伤救场与涂山红红破五百弟子剧情链。
 // v1.28.0: 从角色卡彻底移除地下城肉鸽五脚本与持剑路线请求事件。
 // v1.27.0: 肉鸽改为最后移动方向固定攻击，并优化画布、区块与绘制帧率。
 // v1.26.0: 增加“测试启动持剑肉鸽”脚本按钮，便于跳过正式剧情链路验收游戏。
@@ -343,7 +344,7 @@ const mainHallGreeting = makeOpeningGreeting(
   mainHallInitVar,
 );
 const description = '王权富贵与清瞳篇沉浸式互动测试卡。玩家以 {{user}} 扮演王权富贵；EJS 只按清瞳好感度选择人设，“此去无归”阶段提供八次拔剑与三路线抉择，另含可随时启动的无尽剑幕生存试炼。';
-const creatorNotes = '测试卡 v1.28.0。地下城肉鸽模块已完整移除；弃剑路线保留无尽剑幕，持剑救走清瞳暂不绑定后续小游戏。';
+const creatorNotes = '测试卡 v1.29.0。弃剑出殿后固定承接万剑穿心、东方月初负伤炼剑、王权富贵背他外逃及涂山红红破外围五百弟子；持剑路线暂不套用该救援链。';
 const now = new Date().toISOString();
 const characterBook = {
   entries: worldEntries.map(toCharacterBookEntry),
@@ -372,7 +373,7 @@ const data = {
   post_history_instructions: '',
   tags: ['狐妖小红娘', '王权富贵', '清瞳', 'MVU', '沉浸式'],
   creator: '风宝',
-  character_version: '1.28.0',
+  character_version: '1.29.0',
   alternate_greetings: [trainingGroundGreeting, mainHallGreeting],
   extensions,
   character_book: characterBook,

@@ -1,5 +1,5 @@
 <%_
-/* 清瞳好感人设控制器 v2.0.1 */
+/* 清瞳好感人设控制器 v3.1.0 */
 var stat = (typeof getvar === 'function' ? getvar('stat_data') : (variables.stat_data || variables)) || {};
 var affinity = _.clamp(Number(_.get(stat, '清瞳.好感度', 5)) || 0, 0, 100);
 var affinityProfiles = [
@@ -12,12 +12,11 @@ var affinityProfiles = [
 var affinityProfile = affinityProfiles.find((profile) => affinity >= profile.min && affinity <= profile.max) || affinityProfiles[0];
 var affinityPersonaText = await getwi(charLoreBook || '狐妖小红娘·王权篇·沉浸测试', affinityProfile.entry);
 _%>
-<qing_tong_persona_controller>
+<qing_tong_persona_controller version="3.1.0">
 当前好感度：<%- affinity %>/100
-当前人设档位：<%- affinityProfile.min %>-<%- affinityProfile.max %> <%- affinityProfile.label %>
-当前人设来源：<%- affinityProfile.entry %>
+当前预留档位：<%- affinityProfile.min %>-<%- affinityProfile.max %> <%- affinityProfile.label %>
 <qing_tong_affinity_persona range="<%- affinityProfile.min %>-<%- affinityProfile.max %>">
 <%- affinityPersonaText.trim() %>
 </qing_tong_affinity_persona>
-硬规则：只按好感度选择清瞳对{{user}}的人设槽位。剧情阶段、共同经历与当前关系事实由 LLM 根据正文自行推断；不得仅凭好感度虚构未发生的经历。槽位内容只需描述该好感度下清瞳对{{user}}的判断、态度、边界与表达方式。
+说明：五档内容当前留空，等待作者单独编写；不得仅凭档位标签自行补全、虚构或推断清瞳的人设。
 </qing_tong_persona_controller>

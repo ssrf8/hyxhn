@@ -1,4 +1,13 @@
-// 狐妖小红娘·王权篇部件构建器 v1.29.0
+// 狐妖小红娘·王权篇部件构建器 v1.39.0
+// v1.39.0: 新增黄风城觉醒、红线家法、一剑开天、12580 真相与龙湾衔接的分阶段详案。
+// v1.38.0: 首次绘景补全误判斩丝、花朵揭示、王权家全景织锦与“成为你的眼睛”固定对白。
+// v1.37.0: 次日问妖后改为相隔数日初画，补充清瞳绕行山庄寻找最佳绘景角度的过程。
+// v1.36.0: 撤回清瞳代写人设并恢复五档空槽位；拔剑弹幕与 BGM 持续到对应回复落地。
+// v1.35.0: 清瞳人设扩展为固定核心、双形态专项与五档完整关系人格的模块化总控。
+// v1.34.0: 完成清瞳固定核心、五档好感人设、性格对冲与不可逆双形态契约。
+// v1.33.0: 拔剑联动状态适配额外模型解析覆盖，并恢复本地《梦回还》BGM 配置。
+// v1.32.0: 阶段变量完全由额外解析模型按正文证据更新，移除脚本写回纠正。
+// v1.31.0: 弃剑与持剑流程统一先挥剑斩断捆妖索，再按是否留剑分流。
 // v1.29.0: 固化弃剑出殿后的万剑穿心、东方月初负伤救场与涂山红红破五百弟子剧情链。
 // v1.28.0: 完全移除角色卡中的地下城肉鸽模块及其五个构建产物。
 // v1.27.0: 肉鸽攻击改为最后移动方向，并缓存画布/区块、限制绘制频率以降低卡顿。
@@ -30,6 +39,13 @@ const paths = {
   fengTingyunPersona: path.join(projectRoot, 'worldbook', '42-npc-fengtingyun.txt'),
   dongfangYuechuPersona: path.join(projectRoot, 'worldbook', '43-npc-dongfang-yuechu.txt'),
   tushanHonghongPersona: path.join(projectRoot, 'worldbook', '44-npc-tushan-honghong.txt'),
+  stageDetailController: path.join(projectRoot, 'worldbook', '45-stage-detail-controller.ejs'),
+  stageDetailEntries: [
+    '46-stage-detail-huangfeng-anger.txt',
+    '47-stage-detail-redline-family-law.txt',
+    '48-stage-detail-heaven-sword-betrayal.txt',
+    '49-stage-detail-12580-dragonbay.txt',
+  ].map((filename) => path.join(projectRoot, 'worldbook', filename)),
   worldCore: path.join(projectRoot, 'worldbook', '70-world-core.txt'),
   factionEntries: [
     '71-faction-yiqi-daomeng.txt',
@@ -110,7 +126,7 @@ function makeEntry({ uid, comment, content, enabled = true, constant = true, ord
 
 function assertWorldbook(worldbook) {
   const entries = Object.entries(worldbook.entries);
-  if (entries.length !== 25) throw new Error(`世界书条目数量异常：${entries.length}`);
+  if (entries.length !== 30) throw new Error(`世界书条目数量异常：${entries.length}`);
   const uids = new Set();
   for (const [key, entry] of entries) {
     if (key !== String(entry.uid)) throw new Error(`世界书键 ${key} 与 uid ${entry.uid} 不一致`);
@@ -161,6 +177,8 @@ const [
   fengTingyunPersona,
   dongfangYuechuPersona,
   tushanHonghongPersona,
+  stageDetailController,
+  stageDetailEntries,
   worldCore,
   factionEntries,
   stagePersona,
@@ -186,6 +204,8 @@ const [
   readText(paths.fengTingyunPersona),
   readText(paths.dongfangYuechuPersona),
   readText(paths.tushanHonghongPersona),
+  readText(paths.stageDetailController),
+  Promise.all(paths.stageDetailEntries.map(readText)),
   readText(paths.worldCore),
   Promise.all(paths.factionEntries.map(readText)),
   readText(paths.stagePersona),
@@ -251,6 +271,20 @@ const entryList = [
     order: 144,
     keys: ['涂山红红', '红红', '红红姐', '涂山之主', '妖盟盟主', '狐妖之王'],
   }),
+  makeEntry({ uid: 145, comment: '[mvu_plot]王权篇阶段详案控制器', content: stageDetailController, order: 145 }),
+  ...[
+    '[mvu_plot]阶段详案·黄风怒火',
+    '[mvu_plot]阶段详案·红线家法',
+    '[mvu_plot]阶段详案·开天与叛门',
+    '[mvu_plot]阶段详案·一二五八零与龙湾',
+  ].map((comment, index) => makeEntry({
+    uid: 146 + index,
+    comment,
+    content: stageDetailEntries[index],
+    enabled: false,
+    constant: false,
+    order: 146 + index,
+  })),
   makeEntry({ uid: 150, comment: '[mvu_plot]清瞳好感人设控制器', content: stagePersona, order: 150 }),
   ...affinityPersonaSlots.map((content, index) => makeEntry({
     uid: 151 + index,

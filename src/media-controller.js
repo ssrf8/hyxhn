@@ -1,4 +1,10 @@
-// 狐妖小红娘·王权篇顶层弹幕、音乐与拔剑抉择控制器 v2.13.0
+// 狐妖小红娘·王权篇顶层弹幕、音乐与拔剑抉择控制器 v2.19.0
+// v2.19.0: 对齐黄风城、主殿决裂、12580 真相与龙湾前路的十三阶段路由。
+// v2.18.0: 首次蛛丝画改为误判斩丝后显露花朵与山外视角的王权家全景织锦。
+// v2.17.0: 拔剑联动弹幕瀑布与 BGM 不再按固定时长结束，只在对应正常回复落地后停止。
+// v2.16.0: 拔剑联动状态改由按聊天分桶的脚本变量持久化，避免额外模型解析覆盖聊天变量后中断弹幕与小游戏链路。
+// v2.15.0: 移除脚本对剧情阶段的写回纠正，变量推进完全交给 MVU 额外解析模型。
+// v2.14.0: 弃剑与持剑救人均先挥剑斩断清瞳身上的捆妖索，再按是否留剑分流。
 // v2.13.0: 移除持剑路线地下城肉鸽；持剑救走清瞳不再触发后续小游戏。
 // v2.12.0: 按拔剑选择分流后续游戏：弃剑启动无尽剑幕，持剑启动单次无限肉鸽。
 // v2.11.0: 两条救人选项均明确抱起清瞳走出大殿，弃剑与持剑只保留是否携剑的差异。
@@ -39,8 +45,9 @@ const MEDIA_API_GLOBAL_KEY = '__HYXHN_WANGQUAN_MEDIA_API__';
 const DECISION_SELECTED_EVENT = 'hyxhn_wangquan_decision_selected';
 const BULLETHELL_REQUEST_EVENT = 'hyxhn_wangquan_bullethell_requested';
 const CHAT_STATE_KEY = 'hyxhn_media_runtime';
+const DECISION_STATE_STORE_KEY = 'decisionByChat';
 const MEDIA_CONFIG_GLOBAL_KEY = '__HYXHN_WANGQUAN_MEDIA_CONFIG__';
-const DECISION_STAGE = '04_决裂_此去无归';
+const DECISION_STAGE = '07_决裂_此去无归';
 const DECISION_REQUIRED_CLICKS = 8;
 const POST_CHOICE_GAMES = Object.freeze({
   弃剑: Object.freeze({ kind: 'bullethell', label: '无尽剑幕', event: BULLETHELL_REQUEST_EVENT }),
@@ -82,20 +89,19 @@ const DECISION_CHOICES = Object.freeze({
     label: '弃剑',
     hint: '拒绝父命，以血肉面对山庄万剑',
     value: '弃剑',
-    message: '我将王权剑弃在父亲面前，俯身抱起清瞳，带着她向大殿外走去。我拒绝杀死她，哪怕走出殿门后要以血肉之躯面对整座山庄的万剑。',
+    message: '我挥出王权剑，剑锋只斩断清瞳身上的捆妖索，没有伤她分毫。随后我将王权剑弃在父亲面前，俯身抱起清瞳，带着她向大殿外走去。我拒绝杀死她，哪怕走出殿门后要以血肉之躯面对整座山庄的万剑。',
   },
   rescue: {
     label: '持剑抱起清瞳',
     hint: '保留王权剑，亲手破开归路',
     value: '持剑救走清瞳',
-    message: '我没有弃剑。我握住王权剑，俯身抱起清瞳，带着她向大殿外走去。我决定在走出殿门后，以自己的剑破开归路，带她离开。',
+    message: '我挥出王权剑，剑锋只斩断清瞳身上的捆妖索，没有伤她分毫。我没有弃剑，而是继续握住王权剑，俯身抱起清瞳，带着她向大殿外走去。我决定在走出殿门后，以自己的剑破开归路，带她离开。',
   },
 });
 
 const MVU_EVENTS = {
   initialized: 'mag_variable_initiailized',
   updateEnded: 'mag_variable_update_ended',
-  beforeMessageUpdate: 'mag_before_message_update',
 };
 
 const STAGE_EVENTS = Object.freeze({
@@ -107,22 +113,42 @@ const STAGE_EVENTS = Object.freeze({
   },
   '02_初遇_笼中清瞳': {
     music: 'dream_return',
-    normal: ['蛛丝铺开，山庄之外的天地第一次有了形状', '她一幅幅画，他便一次次重新认识所谓的妖'],
+    normal: ['一剑斩断半幅蛛丝，回首才看见花与王权家的全景', '以后，让我成为你的眼睛吧'],
   },
-  '03_相知_画中山河': {
-    normal: ['他因给妖怪留下生路，被吊上树梢受罚', '禁制解不开，她便继续为他画外面的世界'],
-    center: ['绳上的禁制解不开，便再为我画一次外面的世界吧'],
+  '03_黄风_怒火迷城': {
+    normal: ['鹿妖临死前的清明，像一道刺进旧认知的光', '她终于织出了不愿让他看见的尸山血海'],
   },
-  '04_决裂_此去无归': {
+  '04_黄风_红线家法': {
+    normal: ['剑锋不再追逐性命，而是斩向操纵仇恨的红线', '树下无言一面，是两位表兄弟第一次相见'],
+    center: ['他们只看见他放走妖怪，却看不见剑下断开的线'],
+  },
+  '05_黄风_一剑开天': {
+    normal: ['一剑开天，所斩并非群妖', '黄风城下，一人一剑止住两方杀意'],
+    center: ['剑若只知杀戮，又凭什么称为道'],
+  },
+  '06_败露_主殿杀令': {
+    normal: ['她只被绳索缚在殿中，王权剑已落到他面前', '父命只剩一句：拔剑，杀了她'],
+  },
+  '07_决裂_此去无归': {
     normal: ['王权剑落在身前', '这一剑拔出之后，此去无归'],
   },
-  '05_尾声_万水千山': {
+  '08_尾声_万水千山': {
     normal: ['这一次，选择不再由家族替他作出'],
     center: ['若能走出这里，便一起去看万水千山'],
   },
-  '05_结局_无心之剑': {
+  '08_结局_无心之剑': {
     normal: ['他终于成为了王权家最完美的剑'],
     center: ['剑仍有锋芒，执剑之人却已不在'],
+  },
+  '09_深山_代号一二五八零': {
+    normal: ['主人。代号一二五八零。两个词撕开了隐居后的平静', '最锋利的那一击，没有落在身上'],
+  },
+  '10_再起_王权在手': {
+    normal: ['用不着，我信你', '只要我王权在手，无人可伤我们分毫'],
+    center: ['王权从来不只是一把被家族握住的剑'],
+  },
+  '11_前路_龙湾之约': {
+    normal: ['伤势会慢慢痊愈，道路也终于由自己选择', '山外下一程，通向龙湾'],
   },
 });
 
@@ -703,8 +729,41 @@ function startDanmakuWaterfall() {
   centerLoop();
 }
 
+function getCurrentChatStorageKey() {
+  try {
+    const context = SillyTavern.getContext();
+    const chatId = context.getCurrentChatId?.() ?? context.chatId ?? 'unknown-chat';
+    const characterId = context.characterId ?? 'current-character';
+    return `${characterId}:${String(chatId)}`;
+  } catch {
+    return 'current-character:unknown-chat';
+  }
+}
+
+function getStoredDecisionRuntime() {
+  const legacy = getChatRuntime().decision || {};
+  try {
+    const storage = getVariables({ type: 'script', script_id: SCRIPT_ID }) || {};
+    return storage[DECISION_STATE_STORE_KEY]?.[getCurrentChatStorageKey()] || legacy;
+  } catch {
+    return legacy;
+  }
+}
+
+function hasStoredDecisionRuntime() {
+  try {
+    const storage = getVariables({ type: 'script', script_id: SCRIPT_ID }) || {};
+    return Object.prototype.hasOwnProperty.call(
+      storage[DECISION_STATE_STORE_KEY] || {},
+      getCurrentChatStorageKey(),
+    );
+  } catch {
+    return false;
+  }
+}
+
 function getDecisionRuntime() {
-  const value = getChatRuntime().decision || {};
+  const value = getStoredDecisionRuntime();
   const legacyChoice = Object.entries(DECISION_CHOICES)
     .find(([, choice]) => choice.value === value.sentChoice);
   const selection = value.selection?.value
@@ -754,6 +813,18 @@ function isPostChoiceGameEligible(choice) {
 }
 
 function updateDecisionRuntime(patch) {
+  const chatKey = getCurrentChatStorageKey();
+  updateVariablesWith((variables) => {
+    const next = _.cloneDeep(variables || {});
+    next[DECISION_STATE_STORE_KEY] = next[DECISION_STATE_STORE_KEY] || {};
+    next[DECISION_STATE_STORE_KEY][chatKey] = {
+      ...(next[DECISION_STATE_STORE_KEY][chatKey] || getChatRuntime().decision || {}),
+      ...patch,
+    };
+    return next;
+  }, { type: 'script', script_id: SCRIPT_ID });
+
+  // 兼容旧脚本和调试面板；额外模型解析可能覆盖该镜像，权威副本仍在脚本变量中。
   updateVariablesWith((variables) => {
     const next = _.cloneDeep(variables || {});
     const current = next[CHAT_STATE_KEY] || { triggered: {} };
@@ -762,6 +833,65 @@ function updateDecisionRuntime(patch) {
     next[CHAT_STATE_KEY] = current;
     return next;
   }, { type: 'chat' });
+}
+
+function recoverDecisionRuntimeFromChatHistory() {
+  if (hasStoredDecisionRuntime()) return false;
+  const legacy = getChatRuntime().decision || {};
+  if (legacy.sentChoice || legacy.selection?.value) {
+    updateDecisionRuntime(legacy);
+    return true;
+  }
+
+  let messages;
+  try {
+    messages = getChatMessages('0-{{lastMessageId}}') || [];
+  } catch (error) {
+    console.info('[王权篇抉择] 无法扫描旧聊天，跳过联动状态恢复。', error);
+    return false;
+  }
+
+  const choiceEntry = [...messages].reverse().find((message) => (
+    message?.role === 'user'
+    && Object.values(DECISION_CHOICES).some((choice) => choice.message === String(message.message || '').trim())
+  ));
+  if (!choiceEntry) return false;
+
+  const choicePair = Object.entries(DECISION_CHOICES)
+    .find(([, choice]) => choice.message === String(choiceEntry.message || '').trim());
+  if (!choicePair) return false;
+  const [choiceKey, choice] = choicePair;
+  const choiceMessageId = Number(choiceEntry.message_id);
+  const reply = messages.find((message) => (
+    message?.role === 'assistant'
+    && Number(message.message_id) > choiceMessageId
+    && String(message.message || '').trim()
+  ));
+  const replyMessageId = reply ? Number(reply.message_id) : null;
+
+  updateDecisionRuntime({
+    clicks: DECISION_REQUIRED_CLICKS,
+    sentChoice: choice.value,
+    selection: {
+      key: choiceKey,
+      value: choice.value,
+      label: choice.label,
+      selectedAt: null,
+      choiceMessageId,
+    },
+    awaitingReply: !Number.isInteger(replyMessageId),
+    choiceMessageId,
+    replyReceived: Number.isInteger(replyMessageId),
+    replyMessageId,
+    postChoiceEffectPlayed: false,
+    followupMessageId: null,
+    awaitingPostEffectReply: false,
+    postEffectReplyReceived: false,
+    postEffectReplyMessageId: null,
+    bullethellTriggered: false,
+  });
+  console.info('[王权篇抉择] 已从固定选择消息恢复旧聊天联动状态，等待后续玩家发送。');
+  return true;
 }
 
 function closeDecisionModal() {
@@ -1186,48 +1316,6 @@ function extractDecision(variables) {
     ?? '尚未选择';
 }
 
-function extractDecisionGateNarrative(messageContent) {
-  let text = String(messageContent || '');
-  const draftOpen = text.lastIndexOf('<draft>');
-  if (draftOpen >= 0) {
-    const draftClose = text.lastIndexOf('</draft>');
-    if (draftClose < draftOpen) return '';
-    text = text.slice(draftClose + '</draft>'.length);
-  }
-  const updateIndex = text.search(/<UpdateVariable>/i);
-  if (updateIndex >= 0) text = text.slice(0, updateIndex);
-  return text
-    .replace(/<w2g>[\s\S]*?<\/w2g>/gi, '')
-    .replace(/<catsay>[\s\S]*?<\/catsay>/gi, '')
-    .replace(/<details>[\s\S]*?<\/details>/gi, '')
-    .replace(/<StatusPlaceHolderImpl\s*\/>/gi, '')
-    .trim();
-}
-
-function hasDecisionGateEvidence(narrative) {
-  const text = String(narrative || '');
-  const relationExposed = /清瞳/.test(text)
-    && /(私藏行迹|私通|私交.{0,12}(?:败露|发现)|关系.{0,12}(?:败露|发现)|一再欺瞒|抓获|捆妖索|五花大绑|被缚)/.test(text);
-  const authorityPresent = /(王权霸业|父亲|家主)/.test(text);
-  const swordPresent = /(王权剑|长剑|剑身|脚下的剑|一柄[^。！？]{0,40}剑)/.test(text);
-  const swordDelivered = /(飞旋而出|(?:扔|掷|丢|砸|落|交|递)[^。！？]{0,80}(?:脚下|面前)|(?:脚下|面前)[^。！？]{0,40}(?:剑|长剑|王权剑))/.test(text);
-  const orderPresent = /(拿起剑|拔剑|命令|要求|逼迫|喝令)/.test(text);
-  const killOrder = /(亲手杀了她|亲手杀掉清瞳|杀掉清瞳|杀了清瞳|斩杀清瞳)/.test(text);
-  return relationExposed && authorityPresent && swordPresent && swordDelivered && orderPresent && killOrder;
-}
-
-function correctDecisionStageBeforeMessageUpdate(payload) {
-  const variables = payload?.variables;
-  if (!variables) return;
-  const stage = extractStage(variables);
-  const decision = extractDecision(variables);
-  if (stage !== '03_相知_画中山河' || decision !== '尚未选择') return;
-  const narrative = extractDecisionGateNarrative(payload.message_content);
-  if (!hasDecisionGateEvidence(narrative)) return;
-  _.set(variables, 'stat_data.剧情.当前阶段', DECISION_STAGE);
-  console.warn('[王权篇阶段校验] 正文已满足大殿抉择硬条件，已将模型误写的阶段 03 纠正为 04。');
-}
-
 function shouldOpenDecision(stage, decision) {
   return stage === DECISION_STAGE && decision === '尚未选择' && !getDecisionRuntime().sentChoice;
 }
@@ -1278,13 +1366,13 @@ function playPostChoiceFollowupEffect(messageId) {
   stopDanmakuWaterfall({ announce: false });
   startDanmakuWaterfall();
   void startTrack('dream_return', { restart: true });
-  const durationMs = Math.max(0, Number(runtime.config?.postChoiceEffectDurationMs) || 5000);
-  schedule(() => {
-    stopDanmakuWaterfall({ announce: false });
-    stopMusic({ immediate: true });
-    showCenterDanmaku('拔剑回复联动测试结束', { duration: 1600 });
-  }, durationMs);
-  console.info(`[王权篇抉择] 已确认第 ${messageId} 楼玩家后续发送，联动效果运行 ${durationMs}ms。`);
+  console.info(`[王权篇抉择] 已确认第 ${messageId} 楼玩家后续发送，弹幕瀑布与 BGM 将持续到对应回复落地。`);
+}
+
+function stopPostChoiceFollowupEffect(replyId) {
+  stopDanmakuWaterfall({ announce: false });
+  stopMusic();
+  console.info(`[王权篇抉择] 第 ${replyId} 楼对应回复已落地，弹幕瀑布停止，BGM 开始淡出。`);
 }
 
 function handlePostChoiceReply(messageId, type) {
@@ -1313,16 +1401,19 @@ function handlePostChoiceReply(messageId, type) {
   }
 
   if (!decision.awaitingPostEffectReply || !decision.postChoiceEffectPlayed) return;
-  if (!isPostChoiceGameEligible(decision.sentChoice)) return;
   if (decision.followupMessageId === null || replyId <= decision.followupMessageId) return;
 
+  stopPostChoiceFollowupEffect(replyId);
+  const gameEligible = isPostChoiceGameEligible(decision.sentChoice);
   updateDecisionRuntime({
     awaitingPostEffectReply: false,
-    postEffectReplyReceived: true,
+    postEffectReplyReceived: gameEligible,
     postEffectReplyMessageId: replyId,
   });
   const game = getPostChoiceGame(decision.sentChoice);
-  console.info(`[王权篇抉择] 已确认第 ${replyId} 楼弹幕联动回复，等待玩家下一次发送后启动${game?.label || '后续游戏'}。`);
+  if (gameEligible) {
+    console.info(`[王权篇抉择] 已确认第 ${replyId} 楼弹幕联动回复，等待玩家下一次发送后启动${game.label}。`);
+  }
 }
 
 function handlePostChoiceFollowupMessage(messageId) {
@@ -1367,7 +1458,7 @@ function handlePostChoiceFollowupMessage(messageId) {
     replyReceived: false,
     postChoiceEffectPlayed: true,
     followupMessageId: followupId,
-    awaitingPostEffectReply: isPostChoiceGameEligible(decision.sentChoice),
+    awaitingPostEffectReply: true,
     postEffectReplyReceived: false,
     postEffectReplyMessageId: null,
     bullethellTriggered: false,
@@ -1515,13 +1606,10 @@ async function initialize() {
   });
   exposeMediaApi();
   await runtime.configReady;
+  recoverDecisionRuntimeFromChatHistory();
 
   const mvu = await waitGlobalInitialized('Mvu');
   const mvuEvents = mvu?.events || window.Mvu?.events || MVU_EVENTS;
-  eventOn(
-    mvuEvents.BEFORE_MESSAGE_UPDATE || MVU_EVENTS.beforeMessageUpdate,
-    correctDecisionStageBeforeMessageUpdate,
-  );
   eventOn(mvuEvents.VARIABLE_INITIALIZED || MVU_EVENTS.initialized, (variables) => handleVariables(variables, { allowInitial: true }));
   eventOn(mvuEvents.VARIABLE_UPDATE_ENDED || MVU_EVENTS.updateEnded, (variables) => handleVariables(variables));
   eventOn(tavern_events.MESSAGE_RECEIVED, handlePostChoiceReply);

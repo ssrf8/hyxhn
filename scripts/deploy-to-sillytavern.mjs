@@ -1,4 +1,13 @@
-// 狐妖小红娘·王权篇部署器 v1.29.0
+// 狐妖小红娘·王权篇部署器 v1.39.0
+// v1.39.0: 部署黄风城至龙湾的十三阶段剧情与按阶段动态详案。
+// v1.38.0: 首次绘景补全误判斩丝、花朵揭示、王权家全景织锦与“成为你的眼睛”固定对白。
+// v1.37.0: 次日问妖后改为相隔数日初画，补充清瞳绕行山庄寻找最佳绘景角度的过程。
+// v1.36.0: 撤回清瞳代写人设并恢复五档空槽位；拔剑弹幕与 BGM 持续到对应回复落地。
+// v1.35.0: 部署清瞳固定核心、双形态专项与五档完整关系人格的模块化人设。
+// v1.34.0: 完成清瞳固定核心、五档好感人设、性格对冲与不可逆双形态契约。
+// v1.33.0: 拔剑联动状态适配额外模型解析覆盖，并恢复本地《梦回还》BGM 配置。
+// v1.32.0: 阶段变量完全由额外解析模型按正文证据更新，移除脚本写回纠正。
+// v1.31.0: 两条救人路线统一先挥剑斩断清瞳的捆妖索，再执行弃剑或持剑。
 // v1.29.0: 固化弃剑出殿后的万剑穿心、东方月初负伤救场与涂山红红破五百弟子剧情链。
 // v1.28.0: 从角色卡彻底移除地下城肉鸽五脚本与持剑路线请求事件。
 // v1.27.0: 肉鸽改为最后移动方向固定攻击，并优化画布、区块与绘制帧率。
@@ -311,7 +320,7 @@ const [worldbook, loader, schema, mediaConfig, controller, statusbarController, 
 ]);
 
 const worldEntries = Object.values(worldbook.entries).sort((a, b) => a.uid - b.uid);
-assert(worldEntries.length === 25, '世界书条目数量异常');
+assert(worldEntries.length === 30, '世界书条目数量异常');
 assert(worldEntries[0].comment.startsWith('[InitVar]') && worldEntries[0].disable === true, '[InitVar] 必须禁用');
 
 const [defaultInitVar, mainHallInitVar, openingSelectorHtml] = await Promise.all([
@@ -340,11 +349,11 @@ const trainingGroundGreeting = makeOpeningGreeting(
   defaultInitVar,
 );
 const mainHallGreeting = makeOpeningGreeting(
-  `夜色初临，王权山庄通往主殿的长廊已点起一盏盏冷白灯火。\n\n一名守殿弟子匆匆停在{{user}}面前，垂首抱拳，语气比平日更紧：“少爷，家主有令，请您即刻前往主殿，不得耽搁。”\n\n话音落下，他便退到一旁，不肯多说半个字。长廊尽头，主殿大门紧闭，门缝里透出的光把台阶切成一道森冷的界线。清瞳今晚没有如约出现，山庄各处的戒备也比往常严密得多。\n\n隔着厚重殿门，父亲王权霸业低沉的声音传了出来：“富贵，进来。”\n\n{{user}}此刻如何回应、是否立刻踏入主殿，都由{{user}}亲自决定。`,
+  `黄风城下那一剑已经过去数日。被仇恨红线操控的群妖恢复清明，金灵鳞骤得的力量消散，{{user}}最终顶着道盟众人的怒斥放走了它们。外界却只剩下一句越传越离谱的话——王权富贵为了一个女妖封剑叛道。\n\n夜色初临，王权山庄通往主殿的长廊点起一盏盏冷白灯火。一名守殿弟子匆匆停在{{user}}面前，垂首抱拳：“少爷，家主有令，请您即刻前往主殿，不得耽搁。”\n\n清瞳今晚没有如约出现。长廊尽头，主殿大门紧闭，门缝里的光把台阶切成一道森冷界线。隔着厚重殿门，父亲王权霸业的声音传来：“富贵，进来。”\n\n{{user}}此刻如何回应、是否立刻踏入主殿，都由{{user}}亲自决定。`,
   mainHallInitVar,
 );
-const description = '王权富贵与清瞳篇沉浸式互动测试卡。玩家以 {{user}} 扮演王权富贵；EJS 只按清瞳好感度选择人设，“此去无归”阶段提供八次拔剑与三路线抉择，另含可随时启动的无尽剑幕生存试炼。';
-const creatorNotes = '测试卡 v1.29.0。弃剑出殿后固定承接万剑穿心、东方月初负伤炼剑、王权富贵背他外逃及涂山红红破外围五百弟子；持剑路线暂不套用该救援链。';
+const description = '王权富贵与清瞳篇沉浸式互动测试卡。玩家以 {{user}} 扮演王权富贵；剧情完整覆盖相识绘景、黄风城道义觉醒、斩断仇恨红线、一剑开天、主殿叛门、深山 12580 真相与龙湾前路。清瞳五档关系人设仍为空槽位。“此去无归”提供八次拔剑与三路线抉择，并联动弹幕瀑布、《梦回还》和无尽剑幕试炼。';
+const creatorNotes = '测试卡 v1.39.0。新增黄风城至龙湾十三阶段路由，并用 EJS 只加载当前阶段所需详案，降低长上下文漏更阶段的风险。王权富贵的道路由长期陪伴、王权剑历史、鹿妖清明与黄风城惨状共同形成；12580 揭秘保留真实冲击，但不把清瞳此前全部感情判成骗局。';
 const now = new Date().toISOString();
 const characterBook = {
   entries: worldEntries.map(toCharacterBookEntry),
@@ -373,7 +382,7 @@ const data = {
   post_history_instructions: '',
   tags: ['狐妖小红娘', '王权富贵', '清瞳', 'MVU', '沉浸式'],
   creator: '风宝',
-  character_version: '1.29.0',
+  character_version: '1.39.0',
   alternate_greetings: [trainingGroundGreeting, mainHallGreeting],
   extensions,
   character_book: characterBook,
@@ -410,13 +419,13 @@ const installedWorld = await readJson(targetWorld);
 assert(installedCard.spec === 'chara_card_v3', '安装后的角色卡不是 V3');
 assert(installedCard.data.name === cardName, '安装后的角色名不一致');
 assert(installedCard.data.extensions.world === worldName, '世界书绑定失败');
-assert(installedCard.data.character_book.entries.length === 25, '卡内世界书条目数量异常');
+assert(installedCard.data.character_book.entries.length === 30, '卡内世界书条目数量异常');
 assert(installedCard.data.character_book.entries[0].enabled === false, '卡内 [InitVar] 未禁用');
 assert(installedCard.data.first_mes === '【开始】' && installedCard.first_mes === '【开始】', '开局选择占位符未同步到 V3 双层字段');
 assert(installedCard.data.alternate_greetings.length === 2, '卡内两个正式开局缺失');
 assert(installedCard.data.alternate_greetings.every((greeting) => greeting.includes('<initvar>') && greeting.includes('</initvar>')), '正式开局缺少原生 <initvar>');
 assert(installedCard.data.alternate_greetings[0].includes('00_序章_道门兵人'), '演武场开局变量异常');
-assert(installedCard.data.alternate_greetings[1].includes('父亲王权霸业') && installedCard.data.alternate_greetings[1].includes('03_相知_画中山河'), '主殿开局剧情或变量异常');
+assert(installedCard.data.alternate_greetings[1].includes('父亲王权霸业') && installedCard.data.alternate_greetings[1].includes('06_败露_主殿杀令'), '主殿开局剧情或变量异常');
 assert(installedCard.data.extensions.tavern_helper.scripts.length === 7, '卡内酒馆助手脚本数量异常');
 const installedScripts = installedCard.data.extensions.tavern_helper.scripts;
 assert(!installedScripts.some((script) => script.name.includes('地下城')), '卡内仍残留地下城脚本');

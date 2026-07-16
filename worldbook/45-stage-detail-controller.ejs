@@ -1,0 +1,25 @@
+<%_
+/* 王权篇剧情详案控制器 v1.0.0 */
+var stat = (typeof getvar === 'function' ? getvar('stat_data') : (variables.stat_data || variables)) || {};
+var stage = String(_.get(stat, '剧情.当前阶段', '00_序章_道门兵人'));
+var detailMap = {
+  '03_黄风_怒火迷城': '[mvu_plot]阶段详案·黄风怒火',
+  '04_黄风_红线家法': '[mvu_plot]阶段详案·红线家法',
+  '05_黄风_一剑开天': '[mvu_plot]阶段详案·开天与叛门',
+  '06_败露_主殿杀令': '[mvu_plot]阶段详案·开天与叛门',
+  '07_决裂_此去无归': '[mvu_plot]阶段详案·开天与叛门',
+  '08_尾声_万水千山': '[mvu_plot]阶段详案·一二五八零与龙湾',
+  '09_深山_代号一二五八零': '[mvu_plot]阶段详案·一二五八零与龙湾',
+  '10_再起_王权在手': '[mvu_plot]阶段详案·一二五八零与龙湾',
+  '11_前路_龙湾之约': '[mvu_plot]阶段详案·一二五八零与龙湾'
+};
+var detailEntry = detailMap[stage] || '';
+var detailText = detailEntry ? await getwi(charLoreBook || '狐妖小红娘·王权篇·沉浸测试', detailEntry) : '';
+_%>
+<wangquan_stage_detail_controller version="1.0.0" stage="<%- stage %>">
+<%_ if (detailText && detailText.trim()) { _%>
+<%- detailText.trim() %>
+<%_ } else { _%>
+当前阶段没有额外详案；只遵循常驻阶段骨架，不得借空白跳演后续事件。
+<%_ } _%>
+</wangquan_stage_detail_controller>

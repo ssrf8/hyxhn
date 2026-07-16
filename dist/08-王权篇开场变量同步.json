@@ -1,0 +1,17 @@
+{
+  "type": "script",
+  "enabled": true,
+  "name": "08-王权篇开场变量同步",
+  "id": "1baf5487-9e8a-4b85-8815-2a73d9f9af31",
+  "content": "// 狐妖小红娘·王权篇开局选择控制器 v2.0.0\n// v2.0.0: 不再手动写 MVU；选择页只切换到已由原生 <initvar> 初始化的目标 swipe。\nconst OPENING_SELECT_EVENT = 'hyxhn_opening_selected';\nconst SELECTOR_TEXT = '【开始】';\nconst ALLOWED_SWIPE_IDS = new Set([1, 2]);\nlet selecting = false;\n\nfunction currentOpeningMessage() {\n  try {\n    return getChatMessages(0, { include_swipes: true })?.[0] || null;\n  } catch (_) {\n    return null;\n  }\n}\n\nfunction selectorIsActive() {\n  const message = currentOpeningMessage();\n  if (!message || getLastMessageId() !== 0) return false;\n  const currentText = message.swipes?.[message.swipe_id] ?? '';\n  return message.swipe_id === 0 && String(currentText).trim() === SELECTOR_TEXT;\n}\n\nasync function selectOpening(rawSwipeId) {\n  const swipeId = Number(rawSwipeId);\n  if (selecting || !ALLOWED_SWIPE_IDS.has(swipeId)) return;\n\n  const message = currentOpeningMessage();\n  if (!selectorIsActive() || !message?.swipes?.[swipeId] || !message?.swipes_data?.[swipeId]) {\n    toastr.warning('开局尚未完成 MVU 初始化，请重载脚本后新建聊天。', '王权篇开局');\n    return;\n  }\n\n  selecting = true;\n  try {\n    await setChatMessages([{ message_id: 0, swipe_id: swipeId }], { refresh: 'affected' });\n    console.info(`[王权篇开局] 已切换到 swipe ${swipeId}，正文与原生 MVU 变量快照同步生效。`);\n  } catch (error) {\n    console.error('[王权篇开局] 切换失败。', error);\n    toastr.error('开局切换失败，请查看日志。', '王权篇开局');\n  } finally {\n    selecting = false;\n  }\n}\n\nfunction blockPrematureSend(event) {\n  if (!selectorIsActive()) return;\n  event.preventDefault();\n  event.stopImmediatePropagation();\n  toastr.info('请先在开局选择页中选择一个故事起点。', '王权篇开局');\n}\n\nfunction registerSendGuard() {\n  let parentDocument;\n  try {\n    parentDocument = window.parent?.document || document;\n  } catch (_) {\n    parentDocument = document;\n  }\n\n  const clickHandler = event => {\n    if (event.target?.closest?.('#send_but')) blockPrematureSend(event);\n  };\n  const keydownHandler = event => {\n    if (event.key === 'Enter' && !event.shiftKey && event.target?.closest?.('#send_textarea')) {\n      blockPrematureSend(event);\n    }\n  };\n\n  parentDocument.addEventListener('click', clickHandler, true);\n  parentDocument.addEventListener('keydown', keydownHandler, true);\n  $(window).on('pagehide', () => {\n    parentDocument.removeEventListener('click', clickHandler, true);\n    parentDocument.removeEventListener('keydown', keydownHandler, true);\n  });\n}\n\neventOn(OPENING_SELECT_EVENT, selectOpening);\nregisterSendGuard();\n\nexport {};",
+  "info": "响应开局选择页按钮，仅切换到已由原生 <initvar> 初始化的目标 swipe；不手动写入 MVU。",
+  "button": {
+    "enabled": false,
+    "buttons": []
+  },
+  "data": {},
+  "export_with": {
+    "data": true,
+    "button": true
+  }
+}

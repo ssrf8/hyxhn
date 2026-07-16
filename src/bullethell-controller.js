@@ -1,12 +1,12 @@
-// 狐妖小红娘·王权篇无尽剑幕试炼 v1.0.0
-// 常驻酒馆助手脚本：全屏 Canvas 无尽躲弹幕、八条生命、死亡结果自动续写。
+// 狐妖小红娘·王权篇无尽剑幕试炼 v1.1.0
+// v1.1.0: 支持剧情链事件启动；游戏结束只关闭界面，不再发送结果或触发生成。
+// v1.0.0: 全屏 Canvas 无尽躲弹幕、八条生命、死亡结果自动续写。
 const SCRIPT_ID = 'b43d8e5a-29f2-4ba0-9b76-5ee381f3f6c7';
 const BUTTON_NAME = '开始无尽剑幕试炼';
 const ROOT_ID = 'hyxhn-bullethell-root';
-const RETRY_ROOT_ID = 'hyxhn-bullethell-retry';
 const GLOBAL_API_KEY = '__HYXHN_BULLETHELL_API__';
 const MEDIA_API_KEY = '__HYXHN_WANGQUAN_MEDIA_API__';
-const CHAT_STATE_KEY = 'hyxhn_bullethell_runtime';
+const BULLETHELL_REQUEST_EVENT = 'hyxhn_wangquan_bullethell_requested';
 const MAX_LIVES = 8;
 const INVULNERABLE_SECONDS = 1.2;
 const INITIAL_COUNTDOWN_SECONDS = 3;
@@ -53,12 +53,11 @@ function unlockedLayerEmitterCount(seconds) {
 }
 
 const script = {
-  version: '1.0.0',
+  version: '1.1.0',
   disposers: [],
   parentWindow: null,
   parentDocument: null,
   activeRun: null,
-  retryPanel: null,
   lastButtonActionAt: 0,
   destroyed: false,
 };
@@ -76,133 +75,6 @@ function getMediaApi() {
     return window[MEDIA_API_KEY] || script.parentWindow?.[MEDIA_API_KEY] || null;
   } catch (_) {
     return window[MEDIA_API_KEY] || null;
-  }
-}
-
-function readChatRuntime() {
-  try {
-    if (typeof getVariables !== 'function') return {};
-    return getVariables({ type: 'chat' })?.[CHAT_STATE_KEY] || {};
-  } catch (_) {
-    return {};
-  }
-}
-
-function updateChatRuntime(updater) {
-  if (typeof updateVariablesWith !== 'function') throw new Error('酒馆助手聊天变量接口不可用');
-  updateVariablesWith((variables) => {
-    const next = _.cloneDeep(variables || {});
-    const current = _.cloneDeep(next[CHAT_STATE_KEY] || {});
-    const updated = updater(current) || {};
-    if (Object.keys(updated).length === 0) delete next[CHAT_STATE_KEY];
-    else next[CHAT_STATE_KEY] = updated;
-    return next;
-  }, { type: 'chat' });
-}
-
-function persistPendingResult(result) {
-  updateChatRuntime((runtime) => ({ ...runtime, pendingResult: result }));
-}
-
-function updatePendingStage(resultId, deliveryStage) {
-  updateChatRuntime((runtime) => {
-    if (runtime.pendingResult?.id !== resultId) return runtime;
-    return { ...runtime, pendingResult: { ...runtime.pendingResult, deliveryStage } };
-  });
-}
-
-function clearPendingResult(resultId) {
-  updateChatRuntime((runtime) => {
-    if (runtime.pendingResult?.id !== resultId) return runtime;
-    const next = { ...runtime };
-    delete next.pendingResult;
-    return next;
-  });
-}
-
-function formatResultMessage(result) {
-  return `我进入了无尽剑幕试炼，在不断叠加的王权剑意中坚持了 ${result.seconds.toFixed(1)} 秒，抵达第 ${result.layer} 重剑幕；第八次被剑气命中后，我力竭倒下。`;
-}
-
-function removeRetryPanel() {
-  script.retryPanel?.remove();
-  script.retryPanel = null;
-  script.parentDocument?.getElementById(RETRY_ROOT_ID)?.remove();
-}
-
-function showRetryPanel(result, error) {
-  removeRetryPanel();
-  const doc = script.parentDocument;
-  if (!doc) return;
-
-  const root = doc.createElement('section');
-  root.id = RETRY_ROOT_ID;
-  root.setAttribute('role', 'alertdialog');
-  root.setAttribute('aria-modal', 'true');
-
-  const panel = doc.createElement('div');
-  panel.className = 'hyxhn-bullethell-retry-panel';
-  const title = doc.createElement('strong');
-  title.textContent = '试炼结果尚未送达';
-  const detail = doc.createElement('p');
-  detail.textContent = error?.message || '酒馆暂时没有接住这条结果。';
-  const retry = doc.createElement('button');
-  retry.type = 'button';
-  retry.textContent = '重新发送';
-  retry.addEventListener('click', () => void deliverResult(result));
-  const dismiss = doc.createElement('button');
-  dismiss.type = 'button';
-  dismiss.textContent = '稍后处理';
-  dismiss.addEventListener('click', removeRetryPanel);
-  panel.append(title, detail, retry, dismiss);
-
-  const style = doc.createElement('style');
-  style.textContent = `
-    #${RETRY_ROOT_ID} { position:fixed; inset:0; z-index:2147483500; display:grid; place-items:center;
-      padding:max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right))
-      max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
-      background:rgba(1,3,8,.78); color:#f8e8bd; font-family:"Microsoft YaHei","PingFang SC",sans-serif; }
-    #${RETRY_ROOT_ID} .hyxhn-bullethell-retry-panel { width:min(420px, calc(100vw - 36px)); padding:24px;
-      border:1px solid rgba(238,196,108,.62); border-radius:16px; background:#090b13;
-      box-shadow:0 24px 80px rgba(0,0,0,.65); text-align:center; }
-    #${RETRY_ROOT_ID} strong { display:block; margin-bottom:8px; font-size:20px; }
-    #${RETRY_ROOT_ID} p { margin:0 0 18px; color:#bdb6a7; line-height:1.6; }
-    #${RETRY_ROOT_ID} button { min-width:120px; min-height:44px; margin:5px; border:1px solid #c99b46;
-      border-radius:999px; background:#17121a; color:#f5d993; cursor:pointer; }
-  `;
-  root.append(style, panel);
-  doc.body.appendChild(root);
-  script.retryPanel = root;
-}
-
-async function deliverResult(result) {
-  if (!result || result.sending) return;
-  result.sending = true;
-  removeRetryPanel();
-
-  try {
-    const persisted = readChatRuntime().pendingResult;
-    const deliveryStage = persisted?.id === result.id
-      ? persisted.deliveryStage || result.deliveryStage || 'pending'
-      : result.deliveryStage || 'pending';
-
-    if (deliveryStage === 'pending') {
-      if (typeof createChatMessages !== 'function') throw new Error('createChatMessages 不可用');
-      await createChatMessages([{ role: 'user', message: result.message }]);
-      result.deliveryStage = 'message_created';
-      updatePendingStage(result.id, 'message_created');
-    }
-
-    if (typeof triggerSlash !== 'function') throw new Error('triggerSlash 不可用');
-    await triggerSlash('/trigger');
-    result.deliveryStage = 'complete';
-    clearPendingResult(result.id);
-  } catch (error) {
-    console.error('[无尽剑幕] 试炼结果发送失败。', error);
-    showRetryPanel(result, error);
-    toastr?.error?.('试炼结果发送失败，可在提示面板中重试。');
-  } finally {
-    result.sending = false;
   }
 }
 
@@ -721,7 +593,7 @@ function createRun() {
     const title = doc.createElement('strong');
     title.textContent = '要中止这场试炼吗？';
     const copy = doc.createElement('p');
-    copy.textContent = '主动退出不会发送死亡结果，也不会让 AI 接续本局。';
+    copy.textContent = '退出后不会发送消息，也不会推进剧情。';
     const continueButton = doc.createElement('button');
     continueButton.type = 'button';
     continueButton.textContent = '继续试炼';
@@ -755,24 +627,7 @@ function createRun() {
     run.audio.death();
     render();
     await new Promise((resolve) => win.setTimeout(resolve, 420));
-    const result = {
-      id: run.id,
-      seconds: Number(run.simTime.toFixed(1)),
-      layer: swordLayerAt(run.simTime),
-      livesLost: MAX_LIVES,
-      deliveryStage: 'pending',
-      message: '',
-      createdAt: new Date().toISOString(),
-    };
-    result.message = formatResultMessage(result);
     teardownRun();
-    try {
-      persistPendingResult(result);
-      await deliverResult(result);
-    } catch (error) {
-      console.error('[无尽剑幕] 无法保存试炼结果。', error);
-      showRetryPanel(result, error);
-    }
   }
 
   function countdownStep(dt) {
@@ -905,15 +760,17 @@ function createRun() {
   return { run, teardownRun };
 }
 
-function startGame() {
+function startGame(request = {}) {
   if (script.activeRun && !script.activeRun.ended) {
     toastr?.info?.('无尽剑幕试炼已经在进行。');
     return;
   }
-  removeRetryPanel();
   try {
     const { run } = createRun();
     script.activeRun = run;
+    if (request?.source === 'post_choice_chain') {
+      console.info(`[无尽剑幕] 已由拔剑路线 ${request.choice || '未知'} 的后续玩家消息触发。`);
+    }
   } catch (error) {
     console.error('[无尽剑幕] 启动失败。', error);
     toastr?.error?.(`无尽剑幕启动失败：${error?.message || error}`);
@@ -973,7 +830,6 @@ function destroy() {
     }
   }
   script.activeRun = null;
-  removeRetryPanel();
   script.disposers.splice(0).reverse().forEach(safeInvoke);
   try { if (window[GLOBAL_API_KEY] === script.api) delete window[GLOBAL_API_KEY]; } catch (_) {}
   try { if (script.parentWindow?.[GLOBAL_API_KEY] === script.api) delete script.parentWindow[GLOBAL_API_KEY]; } catch (_) {}
@@ -990,8 +846,10 @@ async function initialize() {
   registerButton();
   exposeApi();
 
-  const pendingResult = readChatRuntime().pendingResult;
-  if (pendingResult?.id && pendingResult?.message) showRetryPanel(pendingResult, new Error('检测到一条尚未完成发送的试炼结果。'));
+  if (typeof eventOn === 'function') {
+    const requestDisposer = eventOn(BULLETHELL_REQUEST_EVENT, (request) => startGame(request));
+    if (requestDisposer?.stop) addDisposer(() => requestDisposer.stop());
+  }
 
   if (typeof eventOn === 'function' && window.tavern_events?.CHAT_CHANGED) {
     const disposer = eventOn(tavern_events.CHAT_CHANGED, () => {

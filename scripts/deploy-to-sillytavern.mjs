@@ -1,4 +1,19 @@
-// 狐妖小红娘·王权篇部署器 v1.14.0
+// 狐妖小红娘·王权篇部署器 v1.28.0
+// v1.28.0: 从角色卡彻底移除地下城肉鸽五脚本与持剑路线请求事件。
+// v1.27.0: 肉鸽改为最后移动方向固定攻击，并优化画布、区块与绘制帧率。
+// v1.26.0: 增加“测试启动持剑肉鸽”脚本按钮，便于跳过正式剧情链路验收游戏。
+// v1.25.0: 接入持剑路线单次无限肉鸽，保留弃剑无尽剑幕并隔离两种请求事件。
+// v1.24.0: 家族调查后发现清瞳；弃剑与持剑均抱起她出殿，父亲不阻拦，战斗只在殿外发生。
+// v1.23.0: 对齐取名清瞳、每日绘景藏画、数次放妖、偏离计划受罚与人形夜探解绳失败。
+// v1.22.0: 重写前三阶段时序，对齐首夜小蜘蛛送情书与墨盘疗伤、次日问妖、第三日七彩蛛丝初见。
+// v1.21.0: MVU 保存楼层前校验大殿抉择正文证据，自动纠正模型误写为 03 的阶段值。
+// v1.20.0: 救人路线在弹幕联动回复后的下一次玩家发送时启动剑幕；游戏结束不再发消息；清空 BGM 配置。
+// v1.19.0: 持久化拔剑选项的结构化记录，并公开跨脚本查询 API 与选择事件。
+// v1.18.0: 使用【开始】向导页选择开局；各正式开局通过原生 <initvar> 独立初始化。
+// v1.17.0: 新增父亲召往主殿开场，并按开场 swipe 自动同步专属 MVU 初始变量。
+// v1.16.0: 拔剑回复落地后继续等待玩家下一次发送，再联动五秒弹幕瀑布与音乐测试。
+// v1.15.0: 此去无归达标后等待玩家下一次发送，拦截原输入并由拔剑选择替代。
+// v1.14.1: 默认关闭剧情阶段自动弹幕，保留手动弹幕、音乐与拔剑交互。
 // v1.14.0: 新增无尽剑幕试炼脚本，并绑定到完整角色卡。
 // v1.13.5: 滚动弹幕纵向轨道铺满完整视口，去除上下留白。
 // v1.13.4: 调整黄绿明度、增加白色弹幕，进一步收窄中央偏移并加入黑色字缘。
@@ -53,6 +68,10 @@ async function exists(filePath) {
 
 async function readJson(filePath) {
   return JSON.parse(await readFile(filePath, 'utf8'));
+}
+
+async function readText(filePath) {
+  return (await readFile(filePath, 'utf8')).replace(/^\uFEFF/, '').trimEnd();
 }
 
 function assert(condition, message) {
@@ -176,12 +195,42 @@ function toCharacterBookEntry(entry) {
   };
 }
 
-function makeRegexScripts() {
+function makeRegexScripts(openingSelectorHtml) {
   const findRegex = '/<UpdateVariable>(?:[\\s\\S]*?<\\/UpdateVariable>|[\\s\\S]*$)/gi';
   return [
     {
+      id: 'd8ce62c7-7609-494b-a50f-c3e19213f26a',
+      scriptName: '01-显示开局选择页',
+      findRegex: '/^\\s*【开始】\\s*$/g',
+      replaceString: `\`\`\`html\n${openingSelectorHtml}\n\`\`\``,
+      trimStrings: [],
+      placement: [2],
+      disabled: false,
+      markdownOnly: true,
+      promptOnly: false,
+      runOnEdit: true,
+      substituteRegex: 0,
+      minDepth: null,
+      maxDepth: null,
+    },
+    {
+      id: 'd52f4cbe-f0a4-43c8-8bc5-dd8f9d9520c5',
+      scriptName: '02-对AI隐藏开局选择占位符',
+      findRegex: '/^\\s*【开始】\\s*$/g',
+      replaceString: '',
+      trimStrings: [],
+      placement: [2],
+      disabled: false,
+      markdownOnly: false,
+      promptOnly: true,
+      runOnEdit: true,
+      substituteRegex: 0,
+      minDepth: null,
+      maxDepth: null,
+    },
+    {
       id: '1135ad73-ffdb-4567-b1a9-a5da9b0df591',
-      scriptName: '01-显示隐藏变量更新',
+      scriptName: '03-显示隐藏变量更新',
       findRegex,
       replaceString: '',
       trimStrings: [],
@@ -196,7 +245,7 @@ function makeRegexScripts() {
     },
     {
       id: 'dd03eea8-9f97-4b9a-8ae8-d4b681744e10',
-      scriptName: '02-对AI隐藏变量更新',
+      scriptName: '04-对AI隐藏变量更新',
       findRegex,
       replaceString: '',
       trimStrings: [],
@@ -211,7 +260,7 @@ function makeRegexScripts() {
     },
     {
       id: 'ee6db68b-bb63-455b-9bed-879c68225c67',
-      scriptName: '03-显示王权篇状态栏',
+      scriptName: '05-显示王权篇状态栏',
       findRegex: '/<StatusPlaceHolderImpl\\s*\\/>/g',
       replaceString: '<div data-hyxhn-statusbar-mount></div>',
       trimStrings: [],
@@ -226,7 +275,7 @@ function makeRegexScripts() {
     },
     {
       id: '27855b42-e1fa-409d-b574-320d199cce19',
-      scriptName: '04-对AI隐藏状态栏占位符',
+      scriptName: '06-对AI隐藏状态栏占位符',
       findRegex: '/<StatusPlaceHolderImpl\\s*\\/>/g',
       replaceString: '',
       trimStrings: [],
@@ -249,7 +298,7 @@ await access(path.join(stRoot, 'public', 'scripts', 'extensions', 'third-party',
 const packageData = await readJson(path.join(stRoot, 'package.json'));
 assert(['sillytavern', 'luker'].includes(packageData.name), '目标路径不是兼容的 SillyTavern/Luker 安装目录');
 
-const [worldbook, loader, schema, mediaConfig, controller, statusbarController, bullethellController] = await Promise.all([
+const [worldbook, loader, schema, mediaConfig, controller, statusbarController, bullethellController, openingInitController] = await Promise.all([
   readJson(path.join(projectRoot, 'dist', '01-王权篇测试世界书.json')),
   readJson(path.join(projectRoot, 'dist', '02-王权篇MVU加载器.json')),
   readJson(path.join(projectRoot, 'dist', '03-王权篇变量结构.json')),
@@ -257,11 +306,18 @@ const [worldbook, loader, schema, mediaConfig, controller, statusbarController, 
   readJson(path.join(projectRoot, 'dist', '05-王权篇顶层弹幕与音乐.json')),
   readJson(path.join(projectRoot, 'dist', '06-王权篇状态栏控制器.json')),
   readJson(path.join(projectRoot, 'dist', '07-王权篇无尽剑幕试炼.json')),
+  readJson(path.join(projectRoot, 'dist', '08-王权篇开场变量同步.json')),
 ]);
 
 const worldEntries = Object.values(worldbook.entries).sort((a, b) => a.uid - b.uid);
 assert(worldEntries.length === 25, '世界书条目数量异常');
 assert(worldEntries[0].comment.startsWith('[InitVar]') && worldEntries[0].disable === true, '[InitVar] 必须禁用');
+
+const [defaultInitVar, mainHallInitVar, openingSelectorHtml] = await Promise.all([
+  readText(path.join(projectRoot, 'worldbook', '00-initvar.yaml')),
+  readText(path.join(projectRoot, 'worldbook', '01-initvar-main-hall.yaml')),
+  readText(path.join(projectRoot, 'src', 'opening-selector.html')),
+]);
 
 await mkdir(path.dirname(targetCard), { recursive: true });
 await mkdir(path.dirname(targetWorld), { recursive: true });
@@ -276,9 +332,18 @@ for (const filePath of [targetCard, targetWorld]) {
   }
 }
 
-const firstMessage = `暮色还未落下，王权山庄的演武场已经响起第三遍剑鸣。\n\n{{user}}站在场心，手中的长剑没有半分颤动。高台上的长老只谈命令、结果与下一场除妖，从没人问过这位被称作“王权富贵”的道门兵人愿不愿意。\n\n墙外忽然掠过一缕极细的银光，像蛛丝，又像某种来自远方的信号。那道银光一闪即逝，藏在暗处的视线却没有立刻离开。\n\n接下来，王权富贵如何回应命令、如何看待墙外的妖，都由{{user}}亲自决定。\n\n<StatusPlaceHolderImpl/>`;
+const firstMessage = '【开始】';
+const makeOpeningGreeting = (story, initVar) => `${story}\n\n<UpdateVariable>\n<initvar>\n${initVar}\n</initvar>\n</UpdateVariable>\n\n<StatusPlaceHolderImpl/>`;
+const trainingGroundGreeting = makeOpeningGreeting(
+  `暮色还未落下，王权山庄的演武场已经响起第三遍剑鸣。\n\n{{user}}站在场心，手中的长剑没有半分颤动。高台上的长老只谈命令、结果与下一场除妖，从没人问过这位被称作“王权富贵”的道门兵人愿不愿意。\n\n墙外忽然掠过一缕极细的银光，像蛛丝，又像某种来自远方的信号。那道银光一闪即逝，藏在暗处的视线却没有立刻离开。\n\n接下来，王权富贵如何回应命令、如何看待墙外的妖，都由{{user}}亲自决定。`,
+  defaultInitVar,
+);
+const mainHallGreeting = makeOpeningGreeting(
+  `夜色初临，王权山庄通往主殿的长廊已点起一盏盏冷白灯火。\n\n一名守殿弟子匆匆停在{{user}}面前，垂首抱拳，语气比平日更紧：“少爷，家主有令，请您即刻前往主殿，不得耽搁。”\n\n话音落下，他便退到一旁，不肯多说半个字。长廊尽头，主殿大门紧闭，门缝里透出的光把台阶切成一道森冷的界线。清瞳今晚没有如约出现，山庄各处的戒备也比往常严密得多。\n\n隔着厚重殿门，父亲王权霸业低沉的声音传了出来：“富贵，进来。”\n\n{{user}}此刻如何回应、是否立刻踏入主殿，都由{{user}}亲自决定。`,
+  mainHallInitVar,
+);
 const description = '王权富贵与清瞳篇沉浸式互动测试卡。玩家以 {{user}} 扮演王权富贵；EJS 只按清瞳好感度选择人设，“此去无归”阶段提供八次拔剑与三路线抉择，另含可随时启动的无尽剑幕生存试炼。';
-const creatorNotes = '测试卡 v1.14.0。新增全屏无尽剑幕试炼：鼠标或触屏相对拖动、八条生命、王权剑意弹幕按波次无限叠加，死亡后发送固定玩家行动与成绩并继续生成；同时保留原有阶段弹幕、音乐、拔剑抉择与状态栏。需要酒馆助手、MVU 与 ST-Prompt-Template。';
+const creatorNotes = '测试卡 v1.28.0。地下城肉鸽模块已完整移除；弃剑路线保留无尽剑幕，持剑救走清瞳暂不绑定后续小游戏。';
 const now = new Date().toISOString();
 const characterBook = {
   entries: worldEntries.map(toCharacterBookEntry),
@@ -289,9 +354,9 @@ const extensions = {
   fav: false,
   world: worldName,
   depth_prompt: { prompt: '', depth: 4, role: 'system' },
-  regex_scripts: makeRegexScripts(),
+  regex_scripts: makeRegexScripts(openingSelectorHtml),
   tavern_helper: {
-    scripts: [loader, schema, mediaConfig, controller, statusbarController, bullethellController],
+    scripts: [openingInitController, loader, schema, mediaConfig, controller, statusbarController, bullethellController],
     variables: {},
   },
 };
@@ -307,8 +372,8 @@ const data = {
   post_history_instructions: '',
   tags: ['狐妖小红娘', '王权富贵', '清瞳', 'MVU', '沉浸式'],
   creator: '风宝',
-  character_version: '1.14.0',
-  alternate_greetings: [],
+  character_version: '1.28.0',
+  alternate_greetings: [trainingGroundGreeting, mainHallGreeting],
   extensions,
   character_book: characterBook,
   group_only_greetings: [],
@@ -346,8 +411,17 @@ assert(installedCard.data.name === cardName, '安装后的角色名不一致');
 assert(installedCard.data.extensions.world === worldName, '世界书绑定失败');
 assert(installedCard.data.character_book.entries.length === 25, '卡内世界书条目数量异常');
 assert(installedCard.data.character_book.entries[0].enabled === false, '卡内 [InitVar] 未禁用');
-assert(installedCard.data.extensions.tavern_helper.scripts.length === 6, '卡内酒馆助手脚本数量异常');
-assert(installedCard.data.extensions.regex_scripts.length === 4, '卡内正则数量异常');
+assert(installedCard.data.first_mes === '【开始】' && installedCard.first_mes === '【开始】', '开局选择占位符未同步到 V3 双层字段');
+assert(installedCard.data.alternate_greetings.length === 2, '卡内两个正式开局缺失');
+assert(installedCard.data.alternate_greetings.every((greeting) => greeting.includes('<initvar>') && greeting.includes('</initvar>')), '正式开局缺少原生 <initvar>');
+assert(installedCard.data.alternate_greetings[0].includes('00_序章_道门兵人'), '演武场开局变量异常');
+assert(installedCard.data.alternate_greetings[1].includes('父亲王权霸业') && installedCard.data.alternate_greetings[1].includes('03_相知_画中山河'), '主殿开局剧情或变量异常');
+assert(installedCard.data.extensions.tavern_helper.scripts.length === 7, '卡内酒馆助手脚本数量异常');
+const installedScripts = installedCard.data.extensions.tavern_helper.scripts;
+assert(!installedScripts.some((script) => script.name.includes('地下城')), '卡内仍残留地下城脚本');
+assert(!installedScripts.some((script) => script.content.includes('hyxhn_wangquan_roguelite_requested')), '卡内仍残留肉鸽请求事件');
+assert(installedCard.data.extensions.regex_scripts.length === 6, '卡内正则数量异常');
+assert(installedCard.data.extensions.regex_scripts[0].replaceString.includes('hyxhn_opening_selected'), '开局选择页正则缺少按钮事件');
 assert(Object.keys(installedWorld.entries).every((key) => key === String(installedWorld.entries[key].uid)), '独立世界书键与 uid 不一致');
 
 console.log(`部署完成：${cardName}`);

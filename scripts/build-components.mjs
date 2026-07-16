@@ -1,7 +1,10 @@
-// 狐妖小红娘·王权篇部件构建器 v1.14.0
+// 狐妖小红娘·王权篇部件构建器 v1.28.0
+// v1.28.0: 完全移除角色卡中的地下城肉鸽模块及其五个构建产物。
+// v1.27.0: 肉鸽攻击改为最后移动方向，并缓存画布/区块、限制绘制频率以降低卡顿。
+// v1.26.0: 为持剑肉鸽运行时增加不发送消息的手动测试启动按钮。
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const distDir = path.join(projectRoot, 'dist');
@@ -15,6 +18,7 @@ const paths = {
   statusbarController: path.join(projectRoot, 'src', 'statusbar-controller.js'),
   statusbarHtml: path.join(projectRoot, 'src', 'statusbar.html'),
   bullethellController: path.join(projectRoot, 'src', 'bullethell-controller.js'),
+  openingInitController: path.join(projectRoot, 'src', 'opening-init-controller.js'),
   mediaConfig: path.join(projectRoot, 'config', 'media-assets.json'),
   initVar: path.join(projectRoot, 'worldbook', '00-initvar.yaml'),
   updateRules: path.join(projectRoot, 'worldbook', '10-update-rules.txt'),
@@ -126,6 +130,15 @@ async function writeJson(filename, value) {
 }
 
 await mkdir(distDir, { recursive: true });
+for (const staleRogueliteOutput of [
+  '09-持剑肉鸽内容库.json',
+  '10-持剑肉鸽运行时.json',
+  '11-持剑肉鸽窗口与输入.json',
+  '12-持剑肉鸽存档桥.json',
+  '13-持剑肉鸽诊断工具.json',
+]) {
+  await rm(path.join(distDir, staleRogueliteOutput), { force: true });
+}
 
 const [
   loader,
@@ -136,6 +149,7 @@ const [
   statusbarController,
   statusbarHtml,
   bullethellController,
+  openingInitController,
   mediaConfigRaw,
   initVar,
   updateRules,
@@ -160,6 +174,7 @@ const [
   readText(paths.statusbarController),
   readText(paths.statusbarHtml),
   readText(paths.bullethellController),
+  readText(paths.openingInitController),
   readText(paths.mediaConfig),
   readText(paths.initVar),
   readText(paths.updateRules),
@@ -298,9 +313,14 @@ outputs.push(await writeJson('07-王权篇无尽剑幕试炼.json', makeScript({
   id: 'b43d8e5a-29f2-4ba0-9b76-5ee381f3f6c7',
   name: '07-王权篇无尽剑幕试炼',
   content: bullethellController,
-  info: '全屏无尽躲弹幕试炼。八条生命耗尽后发送固定玩家行动与本局成绩，并触发剧情继续生成。',
+  info: '全屏无尽躲弹幕试炼。弃剑路线在指定对话链节点自动启动；结束后不发送消息、不触发生成。',
   buttons: ['开始无尽剑幕试炼'],
 })));
-
+outputs.push(await writeJson('08-王权篇开场变量同步.json', makeScript({
+  id: '1baf5487-9e8a-4b85-8815-2a73d9f9af31',
+  name: '08-王权篇开场变量同步',
+  content: openingInitController,
+  info: '响应开局选择页按钮，仅切换到已由原生 <initvar> 初始化的目标 swipe；不手动写入 MVU。',
+})));
 console.log(`已生成 ${outputs.length} 个可导入部件：`);
 for (const output of outputs) console.log(`- ${path.relative(projectRoot, output)}`);

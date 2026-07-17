@@ -1,25 +1,37 @@
 <%_
-/* 王权篇剧情详案控制器 v1.0.0 */
+/* 王权篇剧情详案控制器 v1.3.0 */
 var stat = (typeof getvar === 'function' ? getvar('stat_data') : (variables.stat_data || variables)) || {};
 var stage = String(_.get(stat, '剧情.当前阶段', '00_序章_道门兵人'));
 var detailMap = {
   '03_黄风_怒火迷城': '[mvu_plot]阶段详案·黄风怒火',
   '04_黄风_红线家法': '[mvu_plot]阶段详案·红线家法',
   '05_黄风_一剑开天': '[mvu_plot]阶段详案·开天与叛门',
+  '06_分岔_执剑夺权': '[mvu_plot]阶段详案·自由主线',
+  '06_分岔_携瞳远走': '[mvu_plot]阶段详案·自由主线',
   '06_败露_主殿杀令': '[mvu_plot]阶段详案·开天与叛门',
   '07_决裂_此去无归': '[mvu_plot]阶段详案·开天与叛门',
+  '08_结局_无心之剑': '[mvu_plot]阶段详案·开天与叛门',
   '08_尾声_万水千山': '[mvu_plot]阶段详案·一二五八零与龙湾',
   '09_深山_代号一二五八零': '[mvu_plot]阶段详案·一二五八零与龙湾',
   '10_再起_王权在手': '[mvu_plot]阶段详案·一二五八零与龙湾',
+  '11_余波_关系修复': '[mvu_plot]阶段详案·一二五八零与龙湾',
+  '11_分途_独立前路': '[mvu_plot]阶段详案·一二五八零与龙湾',
   '11_前路_龙湾之约': '[mvu_plot]阶段详案·一二五八零与龙湾'
 };
 var detailEntry = detailMap[stage] || '';
 var detailText = detailEntry ? await getwi(charLoreBook || '狐妖小红娘·王权篇·沉浸测试', detailEntry) : '';
+var dailyDetailStages = ['00_序章_道门兵人', '01_任务_蛛网疑影', '02_初遇_笼中清瞳'];
+var dailyDetailEntry = '[mvu_plot]阶段详案·王权山庄日常';
+var dailyDetailText = dailyDetailStages.includes(stage) ? await getwi(charLoreBook || '狐妖小红娘·王权篇·沉浸测试', dailyDetailEntry) : '';
 _%>
-<wangquan_stage_detail_controller version="1.0.0" stage="<%- stage %>">
+<wangquan_stage_detail_controller version="1.3.0" stage="<%- stage %>">
 <%_ if (detailText && detailText.trim()) { _%>
 <%- detailText.trim() %>
-<%_ } else { _%>
+<%_ } _%>
+<%_ if (dailyDetailText && dailyDetailText.trim()) { _%>
+<%- dailyDetailText.trim() %>
+<%_ } _%>
+<%_ if ((!detailText || !detailText.trim()) && (!dailyDetailText || !dailyDetailText.trim())) { _%>
 当前阶段没有额外详案；只遵循常驻阶段骨架，不得借空白跳演后续事件。
 <%_ } _%>
 </wangquan_stage_detail_controller>

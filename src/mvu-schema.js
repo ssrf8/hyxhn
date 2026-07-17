@@ -1,4 +1,6 @@
-// ═══ 狐妖小红娘·王权篇 Schema v1.3.0 ═══
+// ═══ 狐妖小红娘·王权篇 Schema v1.5.0 ═══
+// v1.5.0: 新增执剑夺权与关系败露前携瞳远走两条自由主线阶段。
+// v1.4.0: 新增参考轨道偏离状态、承接约束，以及关系修复与独立前路阶段。
 // v1.3.0: 将黄风城觉醒、红线家法、一剑开天、叛门、12580 真相与龙湾前路拆为独立阶段。
 // v1.2.0: 出逃山庄更名为此去无归；新增最终抉择与无心之剑独立结局阶段。
 // v1.1.0: 收敛为剧情、时间、地点、清瞳状态、好感度与心声六项状态。
@@ -17,16 +19,21 @@ const STAGES = [
   '03_黄风_怒火迷城',
   '04_黄风_红线家法',
   '05_黄风_一剑开天',
+  '06_分岔_执剑夺权',
+  '06_分岔_携瞳远走',
   '06_败露_主殿杀令',
   '07_决裂_此去无归',
   '08_尾声_万水千山',
   '08_结局_无心之剑',
   '09_深山_代号一二五八零',
   '10_再起_王权在手',
+  '11_余波_关系修复',
+  '11_分途_独立前路',
   '11_前路_龙湾之约',
 ];
 
 const DECISIONS = ['尚未选择', '杀掉清瞳', '弃剑', '持剑救走清瞳'];
+const ROUTE_STATES = ['贴合参考', '已偏离', '独立结局'];
 
 const str = (fallback = '') => z.preprocess(
   value => (value === undefined || value === null || value === '' ? fallback : String(value)),
@@ -46,6 +53,8 @@ export const Schema = z.object({
       z.enum(STAGES),
     ).prefault(STAGES[0]).catch(STAGES[0]),
     最终抉择: z.enum(DECISIONS).prefault(DECISIONS[0]).catch(DECISIONS[0]),
+    轨道状态: z.enum(ROUTE_STATES).prefault(ROUTE_STATES[0]).catch(ROUTE_STATES[0]),
+    承接约束: str(''),
     时间: str('暮色将临'),
     地点: str('王权山庄·演武场'),
   }).prefault({}).catch({}),

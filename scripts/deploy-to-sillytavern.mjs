@@ -1,4 +1,15 @@
-// 狐妖小红娘·王权篇部署器 v1.39.0
+// 狐妖小红娘·王权篇部署器 v1.50.0
+// v1.50.0: 部署轻量常驻大纲与 00 至 02 动态关键细节。
+// v1.49.0: 部署六段式携瞳私奔旅程与毒娘子、追猎队、涂山巡守三条绿灯世界书。
+// v1.48.0: 部署持剑必胜的三段式王权家夺权短线。
+// v1.47.0: 部署蛛丝之外五幕关系修复线与渐进信任结算。
+// v1.46.0: 部署持剑固定突围链、深山自由行动与无心之剑配角余波。
+// v1.45.0: 部署携瞳远走涂山延伸与三条当前时间线涂山绿灯 NPC。
+// v1.44.0: 部署执剑夺权与携瞳远走两条自由主线。
+// v1.43.0: 部署黄风城圈外幕后因果与配角后续收束。
+// v1.42.0: 部署清瞳卧底真相、关系里程碑、风庭云败露链与非固定对白门槛。
+// v1.41.0: 部署偏离承接、关系修复/独立前路、清瞳待填核心人设与山庄日常详案。
+// v1.40.0: 大纲降级为可偏离参考轨道，补充清瞳关系门槛、王权霸业父爱动机、风庭云日常与东方月初返场兜底。
 // v1.39.0: 部署黄风城至龙湾的十三阶段剧情与按阶段动态详案。
 // v1.38.0: 首次绘景补全误判斩丝、花朵揭示、王权家全景织锦与“成为你的眼睛”固定对白。
 // v1.37.0: 次日问妖后改为相隔数日初画，补充清瞳绕行山庄寻找最佳绘景角度的过程。
@@ -320,7 +331,7 @@ const [worldbook, loader, schema, mediaConfig, controller, statusbarController, 
 ]);
 
 const worldEntries = Object.values(worldbook.entries).sort((a, b) => a.uid - b.uid);
-assert(worldEntries.length === 30, '世界书条目数量异常');
+assert(worldEntries.length === 39, '世界书条目数量异常');
 assert(worldEntries[0].comment.startsWith('[InitVar]') && worldEntries[0].disable === true, '[InitVar] 必须禁用');
 
 const [defaultInitVar, mainHallInitVar, openingSelectorHtml] = await Promise.all([
@@ -352,8 +363,8 @@ const mainHallGreeting = makeOpeningGreeting(
   `黄风城下那一剑已经过去数日。被仇恨红线操控的群妖恢复清明，金灵鳞骤得的力量消散，{{user}}最终顶着道盟众人的怒斥放走了它们。外界却只剩下一句越传越离谱的话——王权富贵为了一个女妖封剑叛道。\n\n夜色初临，王权山庄通往主殿的长廊点起一盏盏冷白灯火。一名守殿弟子匆匆停在{{user}}面前，垂首抱拳：“少爷，家主有令，请您即刻前往主殿，不得耽搁。”\n\n清瞳今晚没有如约出现。长廊尽头，主殿大门紧闭，门缝里的光把台阶切成一道森冷界线。隔着厚重殿门，父亲王权霸业的声音传来：“富贵，进来。”\n\n{{user}}此刻如何回应、是否立刻踏入主殿，都由{{user}}亲自决定。`,
   mainHallInitVar,
 );
-const description = '王权富贵与清瞳篇沉浸式互动测试卡。玩家以 {{user}} 扮演王权富贵；剧情完整覆盖相识绘景、黄风城道义觉醒、斩断仇恨红线、一剑开天、主殿叛门、深山 12580 真相与龙湾前路。清瞳五档关系人设仍为空槽位。“此去无归”提供八次拔剑与三路线抉择，并联动弹幕瀑布、《梦回还》和无尽剑幕试炼。';
-const creatorNotes = '测试卡 v1.39.0。新增黄风城至龙湾十三阶段路由，并用 EJS 只加载当前阶段所需详案，降低长上下文漏更阶段的风险。王权富贵的道路由长期陪伴、王权剑历史、鹿妖清明与黄风城惨状共同形成；12580 揭秘保留真实冲击，但不把清瞳此前全部感情判成骗局。';
+const description = '王权富贵与清瞳篇沉浸式互动测试卡。玩家以 {{user}} 扮演王权富贵；剧情参考轨道覆盖相识绘景、黄风城道义觉醒、斩断仇恨红线、一剑开天、主殿叛门、深山 12580 真相与龙湾前路，并允许玩家行动改变过程与关系。一剑开天后可在关系败露前主动执剑夺权或携瞳远走；携瞳远走包含离庄、追索、山外救援、12580 旧网、涂山边境审查与合作立足六段可变剧情，并可与红红、雅雅、容容、翠玉灵及毒娘子互动；12580 后可按信任与同行选择进入经典、关系修复或独立前路。清瞳五档关系条目限制演绎上限，不以数值自动确认恋人关系。“此去无归”提供八次拔剑与三路线抉择，并联动弹幕瀑布、《梦回还》和无尽剑幕试炼。';
+const creatorNotes = '测试卡 v1.50.0。常驻阶段大纲已压缩为全局铁律、17 阶段导航与分支边界；首夜送信、数日绘景、取名和长期秘密日常迁入按阶段动态读取的详案，其他主线关键细节保持不变。清瞳核心人设仍待作者填写。';
 const now = new Date().toISOString();
 const characterBook = {
   entries: worldEntries.map(toCharacterBookEntry),
@@ -382,7 +393,7 @@ const data = {
   post_history_instructions: '',
   tags: ['狐妖小红娘', '王权富贵', '清瞳', 'MVU', '沉浸式'],
   creator: '风宝',
-  character_version: '1.39.0',
+  character_version: '1.50.0',
   alternate_greetings: [trainingGroundGreeting, mainHallGreeting],
   extensions,
   character_book: characterBook,
@@ -419,7 +430,7 @@ const installedWorld = await readJson(targetWorld);
 assert(installedCard.spec === 'chara_card_v3', '安装后的角色卡不是 V3');
 assert(installedCard.data.name === cardName, '安装后的角色名不一致');
 assert(installedCard.data.extensions.world === worldName, '世界书绑定失败');
-assert(installedCard.data.character_book.entries.length === 30, '卡内世界书条目数量异常');
+assert(installedCard.data.character_book.entries.length === 39, '卡内世界书条目数量异常');
 assert(installedCard.data.character_book.entries[0].enabled === false, '卡内 [InitVar] 未禁用');
 assert(installedCard.data.first_mes === '【开始】' && installedCard.first_mes === '【开始】', '开局选择占位符未同步到 V3 双层字段');
 assert(installedCard.data.alternate_greetings.length === 2, '卡内两个正式开局缺失');

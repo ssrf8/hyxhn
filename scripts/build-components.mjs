@@ -1,4 +1,15 @@
-// 狐妖小红娘·王权篇部件构建器 v1.39.0
+// 狐妖小红娘·王权篇部件构建器 v1.50.0
+// v1.50.0: 将常驻阶段大纲精简为导航总控，并把 00 至 02 关键细节迁入动态日常详案。
+// v1.49.0: 构建六段式携瞳私奔旅程与毒娘子、追猎队、涂山巡守三条绿灯世界书。
+// v1.48.0: 构建持剑必胜的三段式王权家夺权短线。
+// v1.47.0: 构建蛛丝之外五幕关系修复线与三种玩家结算出口。
+// v1.46.0: 构建持剑破阵、长老战、深山自由行动与无心之剑配角余波。
+// v1.45.0: 构建携瞳远走涂山延伸与雅雅、容容、翠玉灵三条绿灯 NPC 条目。
+// v1.44.0: 构建执剑夺权与携瞳远走两条自由主线及其动态详案。
+// v1.43.0: 构建黄风城圈外幕后因果与风庭云、金灵鳞、涂山红红、毒娘子后续收束。
+// v1.42.0: 构建清瞳卧底真相、关系里程碑、风庭云发现与主殿在场，以及非固定对白推进。
+// v1.41.0: 构建偏离承接、关系修复/独立前路、清瞳待填核心人设与山庄日常详案。
+// v1.40.0: 构建可偏离参考轨道、五档关系门槛与补强后的配角人设。
 // v1.39.0: 新增黄风城觉醒、红线家法、一剑开天、12580 真相与龙湾衔接的分阶段详案。
 // v1.38.0: 首次绘景补全误判斩丝、花朵揭示、王权家全景织锦与“成为你的眼睛”固定对白。
 // v1.37.0: 次日问妖后改为相隔数日初画，补充清瞳绕行山庄寻找最佳绘景角度的过程。
@@ -65,6 +76,17 @@ const paths = {
     '54-affinity-persona-60-79.ejs',
     '55-affinity-persona-80-100.ejs',
   ].map((filename) => path.join(projectRoot, 'worldbook', filename)),
+  tushanNpcEntries: [
+    '79-npc-tushan-yaya.txt',
+    '80-npc-tushan-rongrong.txt',
+    '81-npc-cuiyuling.txt',
+    '82-npc-duniangzi.txt',
+    '83-npc-wangquan-pursuit.txt',
+    '84-npc-tushan-border-patrol.txt',
+  ].map((filename) => path.join(projectRoot, 'worldbook', filename)),
+  qingTongCorePersona: path.join(projectRoot, 'worldbook', '56-qingtong-core-persona.txt'),
+  wangquanDailyDetail: path.join(projectRoot, 'worldbook', '57-stage-detail-wangquan-daily.txt'),
+  freeMainlineDetail: path.join(projectRoot, 'worldbook', '58-stage-detail-free-mainlines.txt'),
   statusbarProtocol: path.join(projectRoot, 'worldbook', '60-statusbar-protocol.txt'),
 };
 
@@ -126,7 +148,7 @@ function makeEntry({ uid, comment, content, enabled = true, constant = true, ord
 
 function assertWorldbook(worldbook) {
   const entries = Object.entries(worldbook.entries);
-  if (entries.length !== 30) throw new Error(`世界书条目数量异常：${entries.length}`);
+  if (entries.length !== 39) throw new Error(`世界书条目数量异常：${entries.length}`);
   const uids = new Set();
   for (const [key, entry] of entries) {
     if (key !== String(entry.uid)) throw new Error(`世界书键 ${key} 与 uid ${entry.uid} 不一致`);
@@ -181,8 +203,12 @@ const [
   stageDetailEntries,
   worldCore,
   factionEntries,
+  tushanNpcEntries,
   stagePersona,
   affinityPersonaSlots,
+  qingTongCorePersona,
+  wangquanDailyDetail,
+  freeMainlineDetail,
   statusbarProtocol,
 ] = await Promise.all([
   readText(paths.loader),
@@ -208,8 +234,12 @@ const [
   Promise.all(paths.stageDetailEntries.map(readText)),
   readText(paths.worldCore),
   Promise.all(paths.factionEntries.map(readText)),
+  Promise.all(paths.tushanNpcEntries.map(readText)),
   readText(paths.stagePersona),
   Promise.all(paths.affinityPersonaSlots.map(readText)),
+  readText(paths.qingTongCorePersona),
+  readText(paths.wangquanDailyDetail),
+  readText(paths.freeMainlineDetail),
   readText(paths.statusbarProtocol),
 ]);
 
@@ -294,6 +324,30 @@ const entryList = [
     constant: false,
     order: 151 + index,
   })),
+  makeEntry({
+    uid: 156,
+    comment: '[mvu_plot]清瞳核心人设',
+    content: qingTongCorePersona,
+    enabled: false,
+    constant: false,
+    order: 156,
+  }),
+  makeEntry({
+    uid: 157,
+    comment: '[mvu_plot]阶段详案·王权山庄日常',
+    content: wangquanDailyDetail,
+    enabled: false,
+    constant: false,
+    order: 157,
+  }),
+  makeEntry({
+    uid: 158,
+    comment: '[mvu_plot]阶段详案·自由主线',
+    content: freeMainlineDetail,
+    enabled: false,
+    constant: false,
+    order: 158,
+  }),
   makeEntry({ uid: 160, comment: '[mvu_plot]王权篇状态栏输出协议', content: statusbarProtocol, order: 160 }),
   makeEntry({ uid: 170, comment: '[mvu_plot]世界观·人妖秩序与悲剧底色', content: worldCore, order: 170 }),
   ...[
@@ -306,6 +360,14 @@ const entryList = [
     { uid: 177, comment: '[mvu_plot]势力·西西域', keys: ['西西域', '沙狐', '梵云飞', '御沙术', '沙妖'] },
     { uid: 178, comment: '[mvu_plot]势力·傲来国', keys: ['傲来国', '傲来三少', '三少', '六耳', '定海棒'] },
   ].map((config, index) => makeEntry({ ...config, content: factionEntries[index], constant: false, order: config.uid })),
+  ...[
+    { uid: 179, comment: '[mvu_plot]涂山NPC·涂山雅雅', keys: ['涂山雅雅', '雅雅', '雅雅小姐', '无尽酒壶', '寒冰妖气'] },
+    { uid: 180, comment: '[mvu_plot]涂山NPC·涂山容容', keys: ['涂山容容', '容容', '容老板', '涂山二当家', '千面妖容'] },
+    { uid: 181, comment: '[mvu_plot]涂山NPC·翠玉灵', keys: ['翠玉灵', '翠姐姐', '蛭妖之王', '妖界名医', '血液医术'] },
+    { uid: 182, comment: '[mvu_plot]私奔线NPC·毒娘子', keys: ['毒娘子', '五毒太保', '清瞳的上级', '12580上级', '毒夫子', '蜘蛛毒'] },
+    { uid: 183, comment: '[mvu_plot]私奔线群像·王权追猎队', keys: ['王权追猎队', '王权追兵', '山庄追兵', '追捕弟子', '追索队', '王权巡守'] },
+    { uid: 184, comment: '[mvu_plot]私奔线群像·涂山边境巡守', keys: ['涂山边境巡守', '涂山守卫', '狐妖巡守', '边境守卫', '涂山关卡', '涂山巡逻队'] },
+  ].map((config, index) => makeEntry({ ...config, content: tushanNpcEntries[index], constant: false, order: config.uid })),
 ];
 const worldbook = { entries: Object.fromEntries(entryList.map((entry) => [String(entry.uid), entry])) };
 assertWorldbook(worldbook);

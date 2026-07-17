@@ -1,5 +1,5 @@
 <%_
-/* 清瞳好感人设控制器 v3.3.0 */
+/* 清瞳好感人设控制器 v3.4.0 */
 var stat = (typeof getvar === 'function' ? getvar('stat_data') : (variables.stat_data || variables)) || {};
 var affinity = _.clamp(Number(_.get(stat, '清瞳.好感度', 5)) || 0, 0, 100);
 var affinityProfiles = [
@@ -15,7 +15,7 @@ var corePersonaEntry = '[mvu_plot]清瞳核心人设';
 var corePersonaText = String(await getwi(charLoreBook || '狐妖小红娘·王权篇·沉浸测试', corePersonaEntry) || '');
 var corePersonaReady = corePersonaText.trim() && !corePersonaText.includes('【待作者手动填写】');
 _%>
-<qing_tong_persona_controller version="3.3.0">
+<qing_tong_persona_controller version="3.4.0">
 当前好感度：<%- affinity %>/100
 当前关系档位：<%- affinityProfile.min %>-<%- affinityProfile.max %> <%- affinityProfile.label %>
 <%_ if (corePersonaReady) { _%>
@@ -26,5 +26,5 @@ _%>
 <qing_tong_affinity_persona range="<%- affinityProfile.min %>-<%- affinityProfile.max %>">
 <%- affinityPersonaText.trim() %>
 </qing_tong_affinity_persona>
-说明：清瞳核心人设条目由作者手动填写，保留待填标记时自动忽略；好感档位只决定清瞳对王权富贵的关系演绎上限，不改变她敏锐、坚韧、有主见和主动行动的基础人格，也不单独创造恋人关系。正文不得报告数值或档位名称；已经发生的明确互动与选择仍是关系事实的必要依据。
+说明：核心人设定义清瞳跨阶段稳定的经历、驱动力、行为与信息边界；好感档位只决定她对{{user}}的信任、距离和表达强度，不替换基础人格，也不单独创造恋人关系。正文不得报告数值或档位名称；已经发生的明确互动与选择仍是关系事实的必要依据。
 </qing_tong_persona_controller>

@@ -1,10 +1,12 @@
 {
-  "version": "1.4.0",
+  "version": "1.7.0",
   "autoStageDanmaku": false,
-  "assetBaseUrl": "http://127.0.0.1:8123/",
+  "assetBaseUrl": "",
   "tracks": {
     "dream_return": {
-      "src": "音乐/呦猫UNEKO - 梦回还.mp3",
+      "src": "__HYXHN_EMBEDDED_DREAM_RETURN_MP3__",
+      "sourceMode": "embedded-data-url",
+      "sourceAsset": "音乐/呦猫UNEKO - 梦回还·内嵌压缩版.mp3",
       "volume": 0.42,
       "loop": true,
       "fadeInMs": 1200,

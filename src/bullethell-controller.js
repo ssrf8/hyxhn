@@ -1,11 +1,17 @@
-// 狐妖小红娘·王权篇无尽剑幕试炼 v1.1.0
+// 狐妖小红娘·王权篇无尽剑幕试炼 v1.8.0
+// v1.8.0: 移除游戏结束后的结果图楼层写入；插图改由王权剑凝聚剧情的主模型标记触发。
+// v1.7.0: 死亡收尾不再显示暂停字幕；把短占位符写入对应新回复楼层，由卡内正则渲染结果图。
+// v1.6.0: 将剑刃改为等宽长方形主体，仅在最前端短距离收束为剑尖。
+// v1.5.0: 强化剑身实体轮廓、刃面渐变与中央剑脊，避免加色发光吞没剑刃。
+// v1.4.0: 将圆形飞弹改绘为朝向飞行方向的发光剑形，碰撞半径保持不变。
+// v1.3.0: 使用内嵌透明 WebP 角色图替换玩家光标，保留原有小判定点。
+// v1.2.0: 移除小游戏背景音乐调用，保留碰撞、倒计时等本地音效。
 // v1.1.0: 支持剧情链事件启动；游戏结束只关闭界面，不再发送结果或触发生成。
 // v1.0.0: 全屏 Canvas 无尽躲弹幕、八条生命、死亡结果自动续写。
 const SCRIPT_ID = 'b43d8e5a-29f2-4ba0-9b76-5ee381f3f6c7';
 const BUTTON_NAME = '开始无尽剑幕试炼';
 const ROOT_ID = 'hyxhn-bullethell-root';
 const GLOBAL_API_KEY = '__HYXHN_BULLETHELL_API__';
-const MEDIA_API_KEY = '__HYXHN_WANGQUAN_MEDIA_API__';
 const BULLETHELL_REQUEST_EVENT = 'hyxhn_wangquan_bullethell_requested';
 const MAX_LIVES = 8;
 const INVULNERABLE_SECONDS = 1.2;
@@ -14,6 +20,7 @@ const POST_THIRTY_LAYER_SECONDS = 12;
 const MAX_FRAME_SECONDS = 1 / 30;
 const MAX_EMITTER_CATCHUP = 4;
 const BULLET_MARGIN = 72;
+const PLAYER_SPRITE_DATA_URL = '__HYXHN_BULLETHELL_PLAYER_SPRITE_DATA_URL__';
 
 function hostWindow() {
   try {
@@ -53,7 +60,7 @@ function unlockedLayerEmitterCount(seconds) {
 }
 
 const script = {
-  version: '1.1.0',
+  version: '1.8.0',
   disposers: [],
   parentWindow: null,
   parentDocument: null,
@@ -68,14 +75,6 @@ function safeInvoke(callback) {
 
 function addDisposer(callback) {
   if (typeof callback === 'function') script.disposers.push(callback);
-}
-
-function getMediaApi() {
-  try {
-    return window[MEDIA_API_KEY] || script.parentWindow?.[MEDIA_API_KEY] || null;
-  } catch (_) {
-    return window[MEDIA_API_KEY] || null;
-  }
 }
 
 function createAudioEngine() {
@@ -112,7 +111,18 @@ function createAudioEngine() {
   };
 }
 
-function createRun() {
+function createPlayerSprite(win) {
+  try {
+    const image = new win.Image();
+    image.decoding = 'async';
+    image.src = PLAYER_SPRITE_DATA_URL;
+    return image;
+  } catch (_) {
+    return null;
+  }
+}
+
+function createRun(request = {}) {
   const doc = script.parentDocument;
   const win = script.parentWindow;
   const root = doc.createElement('section');
@@ -200,7 +210,7 @@ function createRun() {
     height: 0,
     dpr: 1,
     minDimension: 0,
-    player: { x: 0, y: 0, radius: 4, visualRadius: 18 },
+    player: { x: 0, y: 0, radius: 4, visualRadius: 18, sprite: createPlayerSprite(win) },
     bullets: [],
     bulletPool: [],
     emitters: [],
@@ -220,7 +230,6 @@ function createRun() {
     unlockedEmitters: 0,
     disposers: [],
     audio: createAudioEngine(),
-    mediaStartedByRun: false,
     historyGuard: false,
     suppressPop: false,
     confirmNode: null,
@@ -267,7 +276,7 @@ function createRun() {
   }
 
   function clampPlayer() {
-    const margin = run.player.visualRadius + 4;
+    const margin = run.player.visualRadius * 2.1 + 4;
     run.player.x = clamp(run.player.x || run.width / 2, margin, run.width - margin);
     run.player.y = clamp(run.player.y || run.height * 0.78, margin, run.height - margin);
   }
@@ -481,50 +490,133 @@ function createRun() {
 
   function drawBullets() {
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
     for (const bullet of run.bullets) {
       const radius = bullet.radius;
-      const glow = ctx.createRadialGradient(bullet.x, bullet.y, 0, bullet.x, bullet.y, radius * 2.4);
-      glow.addColorStop(0, '#fffdf0');
-      glow.addColorStop(0.28, '#f7d477');
-      glow.addColorStop(0.68, 'rgba(211,150,46,.72)');
-      glow.addColorStop(1, 'rgba(186,103,23,0)');
-      ctx.fillStyle = glow;
+      const speed = Math.hypot(bullet.vx, bullet.vy) || 1;
+      const ux = bullet.vx / speed;
+      const uy = bullet.vy / speed;
+      const nx = -uy;
+      const ny = ux;
+      const point = (along, across = 0) => ({
+        x: bullet.x + ux * along + nx * across,
+        y: bullet.y + uy * along + ny * across,
+      });
+      const tip = point(radius * 3.25);
+      const tipShoulderLeft = point(radius * 2.45, radius * 0.68);
+      const tipShoulderRight = point(radius * 2.45, -radius * 0.68);
+      const bladeBase = point(-radius * 0.48);
+      const bladeLeft = point(-radius * 0.48, radius * 0.68);
+      const bladeRight = point(-radius * 0.48, -radius * 0.68);
+      const guardCenter = point(-radius * 0.72);
+      const guardLeft = point(-radius * 0.72, radius * 1.16);
+      const guardRight = point(-radius * 0.72, -radius * 1.16);
+      const gripEnd = point(-radius * 1.72);
+      const pommel = point(-radius * 2.02);
+      const trailEnd = point(-radius * 4.1);
+
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.shadowColor = '#e8ad3e';
+      ctx.shadowBlur = radius * 1.35;
+      ctx.strokeStyle = 'rgba(215,150,43,.32)';
+      ctx.lineWidth = Math.max(1, radius * 0.42);
       ctx.beginPath();
-      ctx.arc(bullet.x, bullet.y, radius * 2.4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,247,210,.86)';
-      ctx.lineWidth = Math.max(1, radius * 0.22);
-      ctx.beginPath();
-      ctx.moveTo(bullet.x - bullet.vx * 0.045, bullet.y - bullet.vy * 0.045);
-      ctx.lineTo(bullet.x + bullet.vx * 0.018, bullet.y + bullet.vy * 0.018);
+      ctx.moveTo(trailEnd.x, trailEnd.y);
+      ctx.lineTo(gripEnd.x, gripEnd.y);
       ctx.stroke();
+
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.shadowColor = 'rgba(232,173,62,.7)';
+      ctx.shadowBlur = radius * 0.85;
+      const bladeGradient = ctx.createLinearGradient(bladeLeft.x, bladeLeft.y, bladeRight.x, bladeRight.y);
+      bladeGradient.addColorStop(0, '#a96618');
+      bladeGradient.addColorStop(0.28, '#f1bd4d');
+      bladeGradient.addColorStop(0.52, '#fffbe1');
+      bladeGradient.addColorStop(0.76, '#e7a934');
+      bladeGradient.addColorStop(1, '#7b4611');
+      ctx.fillStyle = bladeGradient;
+      ctx.strokeStyle = '#4a2a0d';
+      ctx.lineWidth = Math.max(1.2, radius * 0.3);
+      ctx.beginPath();
+      ctx.moveTo(tip.x, tip.y);
+      ctx.lineTo(tipShoulderLeft.x, tipShoulderLeft.y);
+      ctx.lineTo(bladeLeft.x, bladeLeft.y);
+      ctx.lineTo(bladeRight.x, bladeRight.y);
+      ctx.lineTo(tipShoulderRight.x, tipShoulderRight.y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(255,255,238,.92)';
+      ctx.lineWidth = Math.max(0.8, radius * 0.16);
+      ctx.beginPath();
+      ctx.moveTo(bladeBase.x, bladeBase.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255,240,177,.72)';
+      ctx.lineWidth = Math.max(0.7, radius * 0.12);
+      ctx.beginPath();
+      ctx.moveTo(bladeLeft.x, bladeLeft.y);
+      ctx.lineTo(tipShoulderLeft.x, tipShoulderLeft.y);
+      ctx.moveTo(bladeRight.x, bladeRight.y);
+      ctx.lineTo(tipShoulderRight.x, tipShoulderRight.y);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#4a2a0d';
+      ctx.lineWidth = Math.max(2.4, radius * 0.62);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(guardLeft.x, guardLeft.y);
+      ctx.lineTo(guardRight.x, guardRight.y);
+      ctx.moveTo(guardCenter.x, guardCenter.y);
+      ctx.lineTo(gripEnd.x, gripEnd.y);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ffd878';
+      ctx.lineWidth = Math.max(1.2, radius * 0.27);
+      ctx.beginPath();
+      ctx.moveTo(guardLeft.x, guardLeft.y);
+      ctx.lineTo(guardRight.x, guardRight.y);
+      ctx.moveTo(guardCenter.x, guardCenter.y);
+      ctx.lineTo(gripEnd.x, gripEnd.y);
+      ctx.stroke();
+
+      ctx.fillStyle = '#4a2a0d';
+      ctx.beginPath();
+      ctx.arc(pommel.x, pommel.y, Math.max(1.8, radius * 0.42), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffe6a0';
+      ctx.beginPath();
+      ctx.arc(pommel.x, pommel.y, Math.max(0.9, radius * 0.2), 0, Math.PI * 2);
+      ctx.fill();
     }
     ctx.restore();
   }
 
   function drawPlayer() {
     const invulnerable = run.simTime < run.invulnerableUntil;
-    if (invulnerable && Math.floor(run.simTime * 12) % 2 === 0) return;
-    const { x, y, visualRadius, radius } = run.player;
+    const { x, y, visualRadius, radius, sprite } = run.player;
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(run.simTime * 0.8);
-    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = invulnerable && Math.floor(run.simTime * 12) % 2 === 0 ? 0.32 : 1;
     ctx.shadowColor = '#f4c96a';
-    ctx.shadowBlur = visualRadius * 1.4;
-    ctx.strokeStyle = '#f4d68a';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (let i = 0; i < 4; i += 1) {
-      const angle = Math.PI / 2 * i;
-      const px = Math.cos(angle) * visualRadius;
-      const py = Math.sin(angle) * visualRadius;
-      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    ctx.shadowBlur = visualRadius * 0.9;
+    if (sprite?.complete && sprite.naturalWidth > 0 && sprite.naturalHeight > 0) {
+      const displayHeight = visualRadius * 4;
+      const displayWidth = displayHeight * (sprite.naturalWidth / sprite.naturalHeight);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(sprite, -displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
+    } else {
+      ctx.fillStyle = '#f4d68a';
+      ctx.beginPath();
+      ctx.arc(0, 0, visualRadius * 0.72, 0, Math.PI * 2);
+      ctx.fill();
     }
-    ctx.closePath();
-    ctx.stroke();
-    ctx.rotate(-run.simTime * 1.7);
+
+    ctx.globalAlpha = invulnerable && Math.floor(run.simTime * 12) % 2 === 0 ? 0.48 : 1;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.shadowBlur = visualRadius * 0.7;
     ctx.fillStyle = '#fffbea';
     ctx.beginPath();
     ctx.arc(0, 0, radius, 0, Math.PI * 2);
@@ -545,33 +637,13 @@ function createRun() {
     updateHud();
   }
 
-  async function ensureMusic() {
-    const api = getMediaApi();
-    if (!api?.playTrack) return;
-    try {
-      const before = api.getState?.() || {};
-      if (before.currentTrack === 'dream_return' && before.playing) return;
-      await api.playTrack('dream_return', { restart: false });
-      run.mediaStartedByRun = true;
-    } catch (error) {
-      console.info('[无尽剑幕] 背景音乐未能启动，游戏继续静音运行。', error);
-    }
-  }
-
-  function stopRunMusic() {
-    if (!run.mediaStartedByRun) return;
-    try { getMediaApi()?.stopMusic?.(); } catch (_) {}
-    run.mediaStartedByRun = false;
-  }
-
-  function teardownRun({ stopMusic = true } = {}) {
+  function teardownRun() {
     if (run.ended) return;
     run.ended = true;
     if (run.raf) win.cancelAnimationFrame(run.raf);
     run.disposers.splice(0).reverse().forEach(safeInvoke);
     if (run.pointerId !== null) safeInvoke(() => canvas.releasePointerCapture(run.pointerId));
     run.audio.close();
-    if (stopMusic) stopRunMusic();
     run.confirmNode?.remove();
     root.remove();
     if (script.activeRun === run) script.activeRun = null;
@@ -623,7 +695,8 @@ function createRun() {
   async function finishDeath() {
     if (run.finishing || run.ended) return;
     run.finishing = true;
-    run.mode = 'paused';
+    run.mode = 'finishing';
+    status.textContent = '';
     run.audio.death();
     render();
     await new Promise((resolve) => win.setTimeout(resolve, 420));
@@ -755,7 +828,6 @@ function createRun() {
     win.history.pushState({ hyxhnBullethell: run.id }, '', win.location.href);
     run.historyGuard = true;
   });
-  void ensureMusic();
   run.raf = win.requestAnimationFrame(frame);
   return { run, teardownRun };
 }
@@ -766,7 +838,7 @@ function startGame(request = {}) {
     return;
   }
   try {
-    const { run } = createRun();
+    const { run } = createRun(request);
     script.activeRun = run;
     if (request?.source === 'post_choice_chain') {
       console.info(`[无尽剑幕] 已由拔剑路线 ${request.choice || '未知'} 的后续玩家消息触发。`);
@@ -821,7 +893,6 @@ function destroy() {
     if (run.raf) script.parentWindow?.cancelAnimationFrame?.(run.raf);
     run.disposers?.splice(0).reverse().forEach(safeInvoke);
     run.audio?.close?.();
-    if (run.mediaStartedByRun) safeInvoke(() => getMediaApi()?.stopMusic?.());
     run.root?.remove?.();
     run.ended = true;
     if (run.historyGuard) {
@@ -859,7 +930,6 @@ async function initialize() {
         if (run.raf) script.parentWindow?.cancelAnimationFrame?.(run.raf);
         run.disposers?.splice(0).reverse().forEach(safeInvoke);
         run.audio?.close?.();
-        if (run.mediaStartedByRun) safeInvoke(() => getMediaApi()?.stopMusic?.());
         run.root?.remove?.();
         script.activeRun = null;
       }

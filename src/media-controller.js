@@ -1,4 +1,10 @@
-// 狐妖小红娘·王权篇顶层弹幕、音乐与拔剑抉择控制器 v2.21.0
+// 狐妖小红娘·王权篇顶层弹幕、音乐与拔剑抉择控制器 v2.27.0
+// v2.27.0: 弹幕海 BGM 强制单次播放；音频自然结束时立即停止弹幕海并清理音乐状态。
+// v2.26.0: 弹幕海按对应生成请求生命周期收尾；正常、空返回、HTTP 错误、异常与中止都会停止视听效果。
+// v2.25.0: 支持直接播放媒体配置脚本内嵌的音频 data URL，不再依赖外部资源地址。
+// v2.24.0: 恢复 12–17px 滚动字号，每批固定发射 40 条并以安全间隔提高总体密度。
+// v2.23.0: 将滚动瀑布提升为超密模式，进一步缩小字号、增加批量并缩短发射间隔。
+// v2.22.0: 缩小瀑布滚动弹幕字号并提高批量、频率与同屏密度，中央弹幕保持不变。
 // v2.21.0: 增加执剑夺权与携瞳远走两条自由主线阶段路由。
 // v2.20.0: 增加不信任后的关系修复与拒绝后的独立前路阶段路由。
 // v2.19.0: 对齐黄风城、主殿决裂、12580 真相与龙湾前路的十三阶段路由。
@@ -10,7 +16,7 @@
 // v2.13.0: 移除持剑路线地下城肉鸽；持剑救走清瞳不再触发后续小游戏。
 // v2.12.0: 按拔剑选择分流后续游戏：弃剑启动无尽剑幕，持剑启动单次无限肉鸽。
 // v2.11.0: 两条救人选项均明确抱起清瞳走出大殿，弃剑与持剑只保留是否携剑的差异。
-// v2.10.0: 对齐吊树夜探剧情，清瞳以人形解绳失败后再为王权富贵绘出外界。
+// v2.10.0: 对齐吊树夜探剧情，清瞳以人形解绳失败后再为{{user}}绘出外界。
 // v2.9.0: 在 MVU 写入楼层前校验大殿三项硬证据，纠正模型把已达标剧情错误保留在 03 的情况。
 // v2.8.0: 弹幕联动回复落地后，弃剑/持剑路线在玩家下一次发送时请求启动无尽剑幕。
 // v2.7.0: 将拔剑选项作为结构化聊天变量持久化，并公开查询 API 与跨脚本选择事件。
@@ -51,6 +57,7 @@ const DECISION_STATE_STORE_KEY = 'decisionByChat';
 const MEDIA_CONFIG_GLOBAL_KEY = '__HYXHN_WANGQUAN_MEDIA_CONFIG__';
 const DECISION_STAGE = '07_决裂_此去无归';
 const DECISION_REQUIRED_CLICKS = 8;
+const POST_CHOICE_REQUEST_TIMEOUT_MS = 300000;
 const POST_CHOICE_GAMES = Object.freeze({
   弃剑: Object.freeze({ kind: 'bullethell', label: '无尽剑幕', event: BULLETHELL_REQUEST_EVENT }),
 });
@@ -187,6 +194,9 @@ const runtime = {
   waterfallTimers: new Set(),
   waterfallCenterSerial: 0,
   lastDanmakuColor: -1,
+  postChoiceRequestActive: false,
+  postChoiceRequestMessageId: null,
+  postChoiceRequestWatchdog: null,
   timers: new Set(),
   cleanupCallbacks: [],
 };
@@ -533,6 +543,12 @@ function mountOverlay() {
     #${ROOT_ID} .hyxhn-danmaku-waterfall {
       filter: saturate(1.36) brightness(.98) contrast(1.12);
     }
+    #${ROOT_ID} .hyxhn-danmaku-normal.hyxhn-danmaku-waterfall {
+      font-size: clamp(12px, 1.15vw, 17px);
+      line-height: 1.12;
+      letter-spacing: .02em;
+      -webkit-text-stroke-width: .75px;
+    }
     @keyframes hyxhn-danmaku-fly {
       from { transform: translateX(0); }
       to { transform: translateX(calc(-100vw - 100%)); }
@@ -718,15 +734,15 @@ function startDanmakuWaterfall() {
 
   const normalLoop = () => {
     if (!runtime.waterfallActive) return;
-    const burst = 4 + Math.floor(Math.random() * 3);
+    const burst = 40;
     for (let index = 0; index < burst; index += 1) {
       showNormalDanmaku(WATERFALL_TEXT, {
-        top: Math.random() * 98,
-        duration: 5.2 + Math.random() * 2.3,
+        top: Math.random() * 99,
+        duration: 6.4 + Math.random() * 2.4,
         waterfall: true,
       });
     }
-    scheduleWaterfall(normalLoop, 45 + Math.random() * 20);
+    scheduleWaterfall(normalLoop, 72 + Math.random() * 24);
   };
 
   const centerLoop = () => {
@@ -1105,6 +1121,7 @@ async function readMediaConfig() {
 
 function resolveAssetUrl(relativeOrAbsolute) {
   if (!relativeOrAbsolute) return '';
+  if (/^data:audio\/[a-z0-9.+-]+;base64,/i.test(relativeOrAbsolute)) return relativeOrAbsolute;
   try {
     return new URL(relativeOrAbsolute, runtime.config.assetBaseUrl).href;
   } catch (error) {
@@ -1122,6 +1139,7 @@ function ensureAudioElement() {
   audio.id = AUDIO_ID;
   audio.preload = 'auto';
   audio.style.display = 'none';
+  audio.addEventListener('ended', handlePostChoiceAudioEnded);
   runtime.parentDocument.body.appendChild(audio);
   runtime.audio = audio;
   return audio;
@@ -1199,7 +1217,7 @@ function armAudioUnlock() {
   runtime.parentDocument.addEventListener('pointerdown', retry, { capture: true });
 }
 
-async function startTrack(trackKey, { restart = false } = {}) {
+async function startTrack(trackKey, { restart = false, loopOverride = null } = {}) {
   // 已加载配置时必须保持在按钮点击的同步调用链里；无条件 await 会丢失浏览器的用户激活状态。
   if (!runtime.config && runtime.configReady) await runtime.configReady;
   const track = runtime.config?.tracks?.[trackKey];
@@ -1214,6 +1232,7 @@ async function startTrack(trackKey, { restart = false } = {}) {
   const targetVolume = _.clamp(Number(track.volume ?? 0.4), 0, 1);
 
   if (runtime.currentTrack === trackKey && audio.src === url && !restart) {
+    audio.loop = typeof loopOverride === 'boolean' ? loopOverride : track.loop !== false;
     if (audio.paused) {
       try {
         await audio.play();
@@ -1227,7 +1246,7 @@ async function startTrack(trackKey, { restart = false } = {}) {
 
   const loadAndPlay = async () => {
     audio.src = url;
-    audio.loop = track.loop !== false;
+    audio.loop = typeof loopOverride === 'boolean' ? loopOverride : track.loop !== false;
     audio.volume = 0;
     audio.load();
     runtime.currentTrack = trackKey;
@@ -1382,14 +1401,52 @@ function registerDecisionSendInterception() {
 function playPostChoiceFollowupEffect(messageId) {
   stopDanmakuWaterfall({ announce: false });
   startDanmakuWaterfall();
-  void startTrack('dream_return', { restart: true });
+  void startTrack('dream_return', { restart: true, loopOverride: false });
+  runtime.postChoiceRequestActive = true;
+  runtime.postChoiceRequestMessageId = Number(messageId);
+  if (runtime.postChoiceRequestWatchdog !== null) {
+    window.clearTimeout(runtime.postChoiceRequestWatchdog);
+    runtime.timers.delete(runtime.postChoiceRequestWatchdog);
+  }
+  runtime.postChoiceRequestWatchdog = schedule(() => {
+    runtime.postChoiceRequestWatchdog = null;
+    finishPostChoiceRequest('请求超过 300 秒仍未结束，已安全超时');
+  }, POST_CHOICE_REQUEST_TIMEOUT_MS);
   console.info(`[王权篇抉择] 已确认第 ${messageId} 楼玩家后续发送，弹幕瀑布与 BGM 将持续到对应回复落地。`);
 }
 
-function stopPostChoiceFollowupEffect(replyId) {
+function finishPostChoiceRequest(reason, replyId = null, { immediateMusic = false } = {}) {
+  if (!runtime.postChoiceRequestActive) return false;
+  const requestMessageId = runtime.postChoiceRequestMessageId;
+  runtime.postChoiceRequestActive = false;
+  runtime.postChoiceRequestMessageId = null;
+  if (runtime.postChoiceRequestWatchdog !== null) {
+    window.clearTimeout(runtime.postChoiceRequestWatchdog);
+    runtime.timers.delete(runtime.postChoiceRequestWatchdog);
+    runtime.postChoiceRequestWatchdog = null;
+  }
   stopDanmakuWaterfall({ announce: false });
-  stopMusic();
-  console.info(`[王权篇抉择] 第 ${replyId} 楼对应回复已落地，弹幕瀑布停止，BGM 开始淡出。`);
+  stopMusic({ immediate: immediateMusic });
+  const replyText = Number.isInteger(Number(replyId)) ? `，回复楼层 ${Number(replyId)}` : '';
+  const musicStopText = immediateMusic ? 'BGM 已完成并清理' : 'BGM 开始淡出';
+  console.info(`[王权篇抉择] 第 ${requestMessageId} 楼对应生成请求结束：${reason}${replyText}；弹幕瀑布停止，${musicStopText}。`);
+  return true;
+}
+
+function stopPostChoiceFollowupEffect(replyId) {
+  finishPostChoiceRequest('收到非空正常回复', replyId);
+}
+
+function handlePostChoiceGenerationEnded(messageId) {
+  finishPostChoiceRequest('生成生命周期结束（含空返回、HTTP 400/502 与请求异常）', messageId);
+}
+
+function handlePostChoiceGenerationStopped() {
+  finishPostChoiceRequest('生成被用户或宿主中止');
+}
+
+function handlePostChoiceAudioEnded() {
+  finishPostChoiceRequest('BGM 完整播放结束，触发硬性收尾', null, { immediateMusic: true });
 }
 
 function handlePostChoiceReply(messageId, type) {
@@ -1531,6 +1588,7 @@ async function resetMediaTrigger() {
 
 function resetDecisionInteraction() {
   closeDecisionModal();
+  finishPostChoiceRequest('拔剑交互被手动重置');
   updateDecisionRuntime({
     clicks: 0,
     sentChoice: null,
@@ -1631,6 +1689,8 @@ async function initialize() {
   eventOn(mvuEvents.VARIABLE_UPDATE_ENDED || MVU_EVENTS.updateEnded, (variables) => handleVariables(variables));
   eventOn(tavern_events.MESSAGE_RECEIVED, handlePostChoiceReply);
   eventOn(tavern_events.MESSAGE_SENT, handlePostChoiceFollowupMessage);
+  eventOn(tavern_events.GENERATION_ENDED, handlePostChoiceGenerationEnded);
+  eventOn(tavern_events.GENERATION_STOPPED, handlePostChoiceGenerationStopped);
   eventOn(tavern_events.CHAT_CHANGED, () => window.location.reload());
 
   try {
@@ -1643,6 +1703,9 @@ async function initialize() {
 
 function cleanup() {
   clearFade();
+  runtime.postChoiceRequestActive = false;
+  runtime.postChoiceRequestMessageId = null;
+  runtime.postChoiceRequestWatchdog = null;
   stopDanmakuWaterfall({ announce: false });
   closeDecisionModal();
   runtime.audioUnlockCleanup?.();

@@ -1,4 +1,26 @@
-// 狐妖小红娘·王权篇部件构建器 v1.50.0
+// 狐妖小红娘·王权篇部件构建器 v1.72.0
+// v1.72.0: 将固定主角名统一替换为 {{user}}，避免玩家名称与正文身份冲突。
+// v1.71.0: 将结果插图从小游戏收尾迁移为主模型在王权剑凝聚剧情中输出的正则标记。
+// v1.70.0: 强制弃剑线将万剑穿心与东方月初登场拆为两个回复，并延后尾声阶段结算。
+// v1.69.0: 为剧情主模型派生完整变量更新协议，与额外 MVU 模型形成同层双重更新和断线兜底。
+// v1.68.0: 接入独立压缩的横版无尽剑幕结果插图资产。
+// v1.67.0: 构建死亡无暂停字幕与新回复楼层结果图占位符写入逻辑。
+// v1.66.0: 将剑形飞弹改为等宽长方形剑身与独立短剑尖结构。
+// v1.65.0: 强化剑形飞弹的实体剑身、深色轮廓、刃面层次与中央剑脊。
+// v1.64.0: 将无尽剑幕飞弹构建为沿速度方向旋转的发光剑形。
+// v1.63.0: 压缩并内嵌无尽剑幕玩家角色图，替换原光标且不扩大碰撞判定。
+// v1.62.0: 构建弹幕海 BGM 单次播放与音频自然结束硬性收尾。
+// v1.61.0: 恢复完整曲长的 128 kbps 内嵌 BGM，并构建生成结束/中止异常收尾逻辑。
+// v1.60.0: 内嵌 BGM 改用保留前 2/3、128 kbps 的有损压缩版，原始音频保持不动。
+// v1.59.0: 将《梦回还》编码进媒体配置脚本，弹幕瀑布离线播放且不再请求云端或本地服务。
+// v1.58.0: 移除无尽剑幕小游戏 BGM，保留弹幕瀑布的《梦回还》联动。
+// v1.57.0: 新增两条默认关闭的清瞳常驻形态覆写，并规定纯蜘蛛模式优先。
+// v1.56.0: 构建清瞳完整核心人设并接入五档关系控制器。
+// v1.55.0: 构建恢复字号且每批固定 40 条的高密滚动弹幕瀑布。
+// v1.54.0: 构建滚动弹幕瀑布超密模式。
+// v1.53.0: 构建更小字号、更高批量与更高频率的滚动弹幕瀑布。
+// v1.52.0: 在卡内演绎指南加入候选选项防剧透协议，锁定“选行为，不选结果”。
+// v1.51.0: 锁死额外解析输出的 UpdateVariable/JSONPatch 双层容器，防止裸数组解析失败。
 // v1.50.0: 将常驻阶段大纲精简为导航总控，并把 00 至 02 关键细节迁入动态日常详案。
 // v1.49.0: 构建六段式携瞳私奔旅程与毒娘子、追猎队、涂山巡守三条绿灯世界书。
 // v1.48.0: 构建持剑必胜的三段式王权家夺权短线。
@@ -39,8 +61,10 @@ const paths = {
   statusbarController: path.join(projectRoot, 'src', 'statusbar-controller.js'),
   statusbarHtml: path.join(projectRoot, 'src', 'statusbar.html'),
   bullethellController: path.join(projectRoot, 'src', 'bullethell-controller.js'),
+  bullethellPlayerSprite: path.join(projectRoot, 'assets', 'bullethell-player.webp'),
   openingInitController: path.join(projectRoot, 'src', 'opening-init-controller.js'),
   mediaConfig: path.join(projectRoot, 'config', 'media-assets.json'),
+  dreamReturnAudio: path.join(projectRoot, '音乐', '呦猫UNEKO - 梦回还·内嵌压缩版.mp3'),
   initVar: path.join(projectRoot, 'worldbook', '00-initvar.yaml'),
   updateRules: path.join(projectRoot, 'worldbook', '10-update-rules.txt'),
   currentVariables: path.join(projectRoot, 'worldbook', '20-current-variables.txt'),
@@ -87,6 +111,8 @@ const paths = {
   qingTongCorePersona: path.join(projectRoot, 'worldbook', '56-qingtong-core-persona.txt'),
   wangquanDailyDetail: path.join(projectRoot, 'worldbook', '57-stage-detail-wangquan-daily.txt'),
   freeMainlineDetail: path.join(projectRoot, 'worldbook', '58-stage-detail-free-mainlines.txt'),
+  qingTongSpiderlingOverride: path.join(projectRoot, 'worldbook', '59-qingtong-form-override-spiderling.txt'),
+  qingTongPureSpiderOverride: path.join(projectRoot, 'worldbook', '61-qingtong-form-override-pure-spider.txt'),
   statusbarProtocol: path.join(projectRoot, 'worldbook', '60-statusbar-protocol.txt'),
 };
 
@@ -148,7 +174,7 @@ function makeEntry({ uid, comment, content, enabled = true, constant = true, ord
 
 function assertWorldbook(worldbook) {
   const entries = Object.entries(worldbook.entries);
-  if (entries.length !== 39) throw new Error(`世界书条目数量异常：${entries.length}`);
+  if (entries.length !== 42) throw new Error(`世界书条目数量异常：${entries.length}`);
   const uids = new Set();
   for (const [key, entry] of entries) {
     if (key !== String(entry.uid)) throw new Error(`世界书键 ${key} 与 uid ${entry.uid} 不一致`);
@@ -188,8 +214,10 @@ const [
   statusbarController,
   statusbarHtml,
   bullethellController,
+  bullethellPlayerSprite,
   openingInitController,
   mediaConfigRaw,
+  dreamReturnAudio,
   initVar,
   updateRules,
   currentVariables,
@@ -209,6 +237,8 @@ const [
   qingTongCorePersona,
   wangquanDailyDetail,
   freeMainlineDetail,
+  qingTongSpiderlingOverride,
+  qingTongPureSpiderOverride,
   statusbarProtocol,
 ] = await Promise.all([
   readText(paths.loader),
@@ -219,8 +249,10 @@ const [
   readText(paths.statusbarController),
   readText(paths.statusbarHtml),
   readText(paths.bullethellController),
+  readFile(paths.bullethellPlayerSprite),
   readText(paths.openingInitController),
   readText(paths.mediaConfig),
+  readFile(paths.dreamReturnAudio),
   readText(paths.initVar),
   readText(paths.updateRules),
   readText(paths.currentVariables),
@@ -240,17 +272,25 @@ const [
   readText(paths.qingTongCorePersona),
   readText(paths.wangquanDailyDetail),
   readText(paths.freeMainlineDetail),
+  readText(paths.qingTongSpiderlingOverride),
+  readText(paths.qingTongPureSpiderOverride),
   readText(paths.statusbarProtocol),
 ]);
 
 const mediaConfig = JSON.parse(mediaConfigRaw);
+const embeddedDreamReturnPlaceholder = '__HYXHN_EMBEDDED_DREAM_RETURN_MP3__';
+if (mediaConfig?.tracks?.dream_return?.src !== embeddedDreamReturnPlaceholder) {
+  throw new Error(`媒体配置缺少内嵌音乐占位符：${embeddedDreamReturnPlaceholder}`);
+}
+const builtMediaConfig = structuredClone(mediaConfig);
+builtMediaConfig.tracks.dream_return.src = `data:audio/mpeg;base64,${dreamReturnAudio.toString('base64')}`;
 const mediaConfigPlaceholder = '__HYXHN_MEDIA_CONFIG__';
 if (!mediaConfigScript.includes(mediaConfigPlaceholder)) {
   throw new Error(`媒体配置脚本缺少构建占位符：${mediaConfigPlaceholder}`);
 }
 const builtMediaConfigScript = mediaConfigScript.replace(
   mediaConfigPlaceholder,
-  JSON.stringify(mediaConfig),
+  JSON.stringify(builtMediaConfig),
 );
 const swordIconPlaceholder = '__HYXHN_SWORD_ICON_DATA_URL__';
 if (!controller.includes(swordIconPlaceholder)) {
@@ -258,14 +298,41 @@ if (!controller.includes(swordIconPlaceholder)) {
 }
 const swordIconDataUrl = `data:image/jpeg;base64,${swordIcon.toString('base64')}`;
 const builtController = controller.replace(swordIconPlaceholder, swordIconDataUrl);
+const bullethellPlayerSpritePlaceholder = '__HYXHN_BULLETHELL_PLAYER_SPRITE_DATA_URL__';
+if (!bullethellController.includes(bullethellPlayerSpritePlaceholder)) {
+  throw new Error(`无尽剑幕脚本缺少玩家角色图占位符：${bullethellPlayerSpritePlaceholder}`);
+}
+const bullethellPlayerSpriteDataUrl = `data:image/webp;base64,${bullethellPlayerSprite.toString('base64')}`;
+const builtBullethellController = bullethellController.replace(
+  bullethellPlayerSpritePlaceholder,
+  bullethellPlayerSpriteDataUrl,
+);
 const statusbarPlaceholder = '__HYXHN_STATUSBAR_HTML__';
 if (!statusbarController.includes(statusbarPlaceholder)) {
   throw new Error(`状态栏控制器缺少构建占位符：${statusbarPlaceholder}`);
 }
 const builtStatusbarController = statusbarController.replace(statusbarPlaceholder, JSON.stringify(statusbarHtml));
+const evidenceRulesMarker = '证据纪律:';
+const evidenceRulesIndex = updateRules.indexOf(evidenceRulesMarker);
+if (evidenceRulesIndex < 0) {
+  throw new Error(`变量更新规则缺少派生锚点：${evidenceRulesMarker}`);
+}
+const mainModelUpdateRules = `王权篇主模型变量更新规则 v1.0.0
+
+身份与输出协议:
+  - 你是剧情主模型。先正常完成本轮正文；随后根据“王权篇当前变量”、玩家本轮已经发送的行动以及你刚写完的正文，计算本轮变量变化
+  - 每轮正文后恰好输出一个变量块，严格使用 <UpdateVariable><JSONPatch>JSON 数组</JSONPatch></UpdateVariable>
+  - <UpdateVariable> 的唯一直接子节点必须是一个 <JSONPatch>；禁止裸数组、第二个变量块、Analysis/Analyze、Markdown 代码围栏、MVU_Status 或 stat_data 镜像
+  - 有变化时在同一个 JSON 数组中输出全部 patch；无变化时输出 <UpdateVariable><JSONPatch>[]</JSONPatch></UpdateVariable>
+  - 只允许更新既有路径：/剧情/当前阶段、/剧情/最终抉择、/剧情/轨道状态、/剧情/承接约束、/剧情/时间、/剧情/地点、/清瞳/状态、/清瞳/好感度、/清瞳/心声
+  - 更新既有字段统一使用 replace；不得新增 schema 外字段
+  - 主模型补丁是额外 MVU 接口失败时的落库兜底；额外模型成功时会在同一楼层追加复核补丁，因此必须严格遵守下方相同证据门槛，避免两套结果冲突
+
+${updateRules.slice(evidenceRulesIndex)}`;
 const entryList = [
   makeEntry({ uid: 100, comment: '[InitVar]王权篇变量初始化勿开', content: initVar, enabled: false, order: 100 }),
   makeEntry({ uid: 110, comment: '[mvu_update]王权篇变量更新规则', content: updateRules, order: 110 }),
+  makeEntry({ uid: 111, comment: '[mvu_plot]王权篇主模型变量更新规则', content: mainModelUpdateRules, order: 111 }),
   makeEntry({ uid: 120, comment: '王权篇当前变量', content: currentVariables, order: 120 }),
   makeEntry({ uid: 130, comment: '[mvu_plot]王权篇演绎指南', content: plotGuide, order: 130 }),
   makeEntry({ uid: 140, comment: '[mvu_plot]王权篇阶段剧情', content: stageOutline, order: 140 }),
@@ -275,7 +342,7 @@ const entryList = [
     content: wangquanBayePersona,
     constant: false,
     order: 141,
-    keys: ['王权霸业', '王权家主', '家主大人', '富贵的父亲', '父亲', '东方淮竹'],
+    keys: ['王权霸业', '王权家主', '家主大人', '少主之父', '父亲', '东方淮竹'],
   }),
   makeEntry({
     uid: 142,
@@ -283,7 +350,7 @@ const entryList = [
     content: fengTingyunPersona,
     constant: false,
     order: 142,
-    keys: ['风庭云', '庭云', '风师妹', '师妹', '王权富贵的师妹'],
+    keys: ['风庭云', '庭云', '风师妹', '师妹', '{{user}}的师妹'],
   }),
   makeEntry({
     uid: 143,
@@ -291,7 +358,7 @@ const entryList = [
     content: dongfangYuechuPersona,
     constant: false,
     order: 143,
-    keys: ['东方月初', '月初', '东方公子', '东方盟主', '一气道盟盟主', '富贵的表弟'],
+    keys: ['东方月初', '月初', '东方公子', '东方盟主', '一气道盟盟主', '少主的表弟'],
   }),
   makeEntry({
     uid: 144,
@@ -348,7 +415,23 @@ const entryList = [
     constant: false,
     order: 158,
   }),
+  makeEntry({
+    uid: 159,
+    comment: '可选形态覆写·清瞳始终小蜘蛛娘',
+    content: qingTongSpiderlingOverride,
+    enabled: false,
+    constant: true,
+    order: 9900,
+  }),
   makeEntry({ uid: 160, comment: '[mvu_plot]王权篇状态栏输出协议', content: statusbarProtocol, order: 160 }),
+  makeEntry({
+    uid: 161,
+    comment: '可选形态覆写·清瞳始终纯小蜘蛛',
+    content: qingTongPureSpiderOverride,
+    enabled: false,
+    constant: true,
+    order: 9901,
+  }),
   makeEntry({ uid: 170, comment: '[mvu_plot]世界观·人妖秩序与悲剧底色', content: worldCore, order: 170 }),
   ...[
     { uid: 171, comment: '[mvu_plot]势力·一气道盟', keys: ['一气道盟', '道盟', '道门', '道士', '盟主', '符箓', '法剑', '阵法'] },
@@ -390,7 +473,7 @@ outputs.push(await writeJson('04-王权篇媒体资源配置.json', makeScript({
   id: '2fcf1384-8802-4b31-9ee9-2c5da8f4e011',
   name: '04-王权篇媒体资源配置',
   content: builtMediaConfigScript,
-  info: '独立媒体配置。切换到 R2 时只需修改 config/media-assets.json 并重新导入本文件。',
+  info: '独立媒体配置。《梦回还》已编码在脚本内，可离线播放；无需图床、本地媒体服务器或云端地址。',
   data: { mediaConfig },
 })));
 outputs.push(await writeJson('05-王权篇顶层弹幕与音乐.json', makeScript({
@@ -409,8 +492,8 @@ outputs.push(await writeJson('06-王权篇状态栏控制器.json', makeScript({
 outputs.push(await writeJson('07-王权篇无尽剑幕试炼.json', makeScript({
   id: 'b43d8e5a-29f2-4ba0-9b76-5ee381f3f6c7',
   name: '07-王权篇无尽剑幕试炼',
-  content: bullethellController,
-  info: '全屏无尽躲弹幕试炼。弃剑路线在指定对话链节点自动启动；结束后不发送消息、不触发生成。',
+  content: builtBullethellController,
+  info: '全屏无尽躲弹幕试炼。玩家角色图已压缩并编码进脚本，碰撞仍使用独立小判定点；结束后不发送消息、不触发生成。',
   buttons: ['开始无尽剑幕试炼'],
 })));
 outputs.push(await writeJson('08-王权篇开场变量同步.json', makeScript({

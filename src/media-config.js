@@ -1,5 +1,7 @@
-// 狐妖小红娘·王权篇媒体资源配置 v1.1.0
-// 构建时只替换下面的占位符；以后切换 R2 仅需修改 config/media-assets.json。
+// 狐妖小红娘·王权篇媒体资源配置 v1.4.0
+// v1.4.0: 恢复《梦回还》完整曲长，继续使用 128 kbps 有损压缩控制体积。
+// v1.3.0: 改为内嵌保留前 2/3、128 kbps 的有损压缩 BGM，降低卡体积。
+// v1.2.0: 构建时把《梦回还》编码为 Base64 data URL，离线发布到顶层页面。
 const MEDIA_CONFIG = __HYXHN_MEDIA_CONFIG__;
 const MEDIA_CONFIG_GLOBAL_KEY = '__HYXHN_WANGQUAN_MEDIA_CONFIG__';
 

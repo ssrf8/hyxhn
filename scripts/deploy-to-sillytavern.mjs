@@ -1,4 +1,26 @@
-// 狐妖小红娘·王权篇部署器 v1.50.0
+// 狐妖小红娘·王权篇部署器 v1.72.0
+// v1.72.0: 部署去固定主角名版本，所有玩家身份统一由 {{user}} 宏承接。
+// v1.71.0: 部署王权剑凝聚插图标记与显示/隐藏正则，并撤销小游戏结束自动插图。
+// v1.70.0: 部署弃剑线双回复硬切分，万剑穿心完成前禁止东方月初登场。
+// v1.69.0: 部署主模型变量补丁与额外 MVU 复核的双重更新协议，并补强主殿已败露事实承接。
+// v1.68.0: 使用独立 1200×900 压缩 WebP 替换结果楼层的临时玩家小图。
+// v1.67.0: 部署新回复楼层结果图显示/提示词隐藏正则，并移除死亡暂停字幕。
+// v1.66.0: 部署等宽长方形剑身与独立短剑尖的飞弹图样。
+// v1.65.0: 部署具备实体剑身、轮廓、刃面渐变与剑脊的飞弹图样。
+// v1.64.0: 部署沿飞行方向旋转的发光剑形飞弹。
+// v1.63.0: 部署内嵌透明 WebP 玩家角色图与独立小判定点。
+// v1.62.0: 部署弹幕海 BGM 单次播放与音频结束硬性停止条件。
+// v1.61.0: 部署完整曲长压缩 BGM，并让生成成功、空返、HTTP 错误、异常与中止统一停止视听效果。
+// v1.60.0: 部署裁去尾部三分之一并降至 128 kbps 的内嵌 BGM，缩小完整卡体积。
+// v1.59.0: 部署内嵌 Base64《梦回还》，弹幕瀑布无需外部音频服务即可播放。
+// v1.58.0: 部署无 BGM 的无尽剑幕，并保留弹幕瀑布《梦回还》联动。
+// v1.57.0: 部署两条默认关闭、可手动开启的清瞳常驻形态覆写。
+// v1.56.0: 部署清瞳完整核心人设与新版关系控制器。
+// v1.55.0: 部署恢复字号且每批固定 40 条的高密滚动弹幕瀑布。
+// v1.54.0: 部署滚动弹幕瀑布超密模式。
+// v1.53.0: 部署更小字号、更密集的滚动弹幕瀑布。
+// v1.52.0: 部署卡内候选选项防剧透协议，不修改用户级全局预设。
+// v1.51.0: 部署带 UpdateVariable/JSONPatch 双层容器强约束的变量更新规则。
 // v1.50.0: 部署轻量常驻大纲与 00 至 02 动态关键细节。
 // v1.49.0: 部署六段式携瞳私奔旅程与毒娘子、追猎队、涂山巡守三条绿灯世界书。
 // v1.48.0: 部署持剑必胜的三段式王权家夺权短线。
@@ -52,7 +74,7 @@
 // v1.8.0: 新增非恒定关键词触发的重要配角“涂山红红”。
 // v1.7.1: 强制每轮唯一 UpdateVariable，禁止 MVU_Status 伪状态与未落库数值。
 // v1.7.0: 新增非恒定关键词触发的男三“东方月初”。
-// v1.6.1: 明确风庭云对王权富贵的少女式暗恋与钦慕。
+// v1.6.1: 明确风庭云对{{user}}的少女式暗恋与钦慕。
 // v1.6.0: 新增非恒定关键词触发的轻量配角“风庭云”。
 // v1.5.0: 部署“此去无归”八次拔剑抉择与三路线结局。
 // v1.4.0: 人设总控只按好感度读取五个禁用内容槽位，剧情由 LLM 自行推断。
@@ -216,7 +238,7 @@ function toCharacterBookEntry(entry) {
   };
 }
 
-function makeRegexScripts(openingSelectorHtml) {
+function makeRegexScripts(openingSelectorHtml, swordAwakeningImageDataUrl) {
   const findRegex = '/<UpdateVariable>(?:[\\s\\S]*?<\\/UpdateVariable>|[\\s\\S]*$)/gi';
   return [
     {
@@ -309,6 +331,66 @@ function makeRegexScripts(openingSelectorHtml) {
       minDepth: null,
       maxDepth: null,
     },
+    {
+      id: '37a14918-b65b-4c0a-9ca3-2170f23aa93f',
+      scriptName: '07-显示王权剑凝聚插图',
+      findRegex: '/<HyxhnWangquanSwordAwakening\\s*\\/>/g',
+      replaceString: `<div style="display:flex;justify-content:center;align-items:center;margin:18px auto 22px;"><img src="${swordAwakeningImageDataUrl}" alt="{{user}}凝聚王权剑守护清瞳" style="display:block;width:min(100%,760px);height:auto;border:1px solid rgba(245,211,151,.32);border-radius:16px;filter:drop-shadow(0 12px 24px rgba(0,0,0,.46));" /></div>`,
+      trimStrings: [],
+      placement: [2],
+      disabled: false,
+      markdownOnly: true,
+      promptOnly: false,
+      runOnEdit: true,
+      substituteRegex: 0,
+      minDepth: null,
+      maxDepth: null,
+    },
+    {
+      id: 'd9465cea-a0e6-466b-9875-17721429b71b',
+      scriptName: '08-对AI隐藏王权剑凝聚插图标记',
+      findRegex: '/<HyxhnWangquanSwordAwakening\\s*\\/>/g',
+      replaceString: '',
+      trimStrings: [],
+      placement: [2],
+      disabled: false,
+      markdownOnly: false,
+      promptOnly: true,
+      runOnEdit: true,
+      substituteRegex: 0,
+      minDepth: null,
+      maxDepth: null,
+    },
+    {
+      id: '91e00be8-9160-4e95-a9fc-8ecb50f50365',
+      scriptName: '09-清理旧小游戏结果图标记',
+      findRegex: '/<HyxhnBullethellResult\\s*\\/>/g',
+      replaceString: '',
+      trimStrings: [],
+      placement: [2],
+      disabled: false,
+      markdownOnly: true,
+      promptOnly: false,
+      runOnEdit: true,
+      substituteRegex: 0,
+      minDepth: null,
+      maxDepth: null,
+    },
+    {
+      id: '46088d2c-14f7-45c5-97ed-9f33f6e46f64',
+      scriptName: '10-对AI隐藏旧小游戏结果图标记',
+      findRegex: '/<HyxhnBullethellResult\\s*\\/>/g',
+      replaceString: '',
+      trimStrings: [],
+      placement: [2],
+      disabled: false,
+      markdownOnly: false,
+      promptOnly: true,
+      runOnEdit: true,
+      substituteRegex: 0,
+      minDepth: null,
+      maxDepth: null,
+    },
   ];
 }
 
@@ -331,14 +413,23 @@ const [worldbook, loader, schema, mediaConfig, controller, statusbarController, 
 ]);
 
 const worldEntries = Object.values(worldbook.entries).sort((a, b) => a.uid - b.uid);
-assert(worldEntries.length === 39, '世界书条目数量异常');
+assert(worldEntries.length === 42, '世界书条目数量异常');
+const mainModelUpdateEntry = worldEntries.find((entry) => entry.comment === '[mvu_plot]王权篇主模型变量更新规则');
+assert(mainModelUpdateEntry?.content.includes('主模型补丁是额外 MVU 接口失败时的落库兜底'), '主模型变量更新兜底条目缺失');
 assert(worldEntries[0].comment.startsWith('[InitVar]') && worldEntries[0].disable === true, '[InitVar] 必须禁用');
+for (const overrideName of ['清瞳始终小蜘蛛娘', '清瞳始终纯小蜘蛛']) {
+  const overrideEntry = worldEntries.find((entry) => entry.comment.includes(overrideName));
+  assert(overrideEntry?.enabled === false && overrideEntry.disable === true && overrideEntry.constant === true, `${overrideName}覆写必须默认关闭且常驻`);
+}
 
-const [defaultInitVar, mainHallInitVar, openingSelectorHtml] = await Promise.all([
+const [defaultInitVar, mainHallInitVar, openingSelectorHtml, swordAwakeningImage] = await Promise.all([
   readText(path.join(projectRoot, 'worldbook', '00-initvar.yaml')),
   readText(path.join(projectRoot, 'worldbook', '01-initvar-main-hall.yaml')),
   readText(path.join(projectRoot, 'src', 'opening-selector.html')),
+  readFile(path.join(projectRoot, 'assets', 'bullethell-result.webp')),
 ]);
+assert(swordAwakeningImage.length > 40_000 && swordAwakeningImage.length < 120_000, `王权剑凝聚插图体积异常：${swordAwakeningImage.length} 字节`);
+const swordAwakeningImageDataUrl = `data:image/webp;base64,${swordAwakeningImage.toString('base64')}`;
 
 await mkdir(path.dirname(targetCard), { recursive: true });
 await mkdir(path.dirname(targetWorld), { recursive: true });
@@ -356,15 +447,15 @@ for (const filePath of [targetCard, targetWorld]) {
 const firstMessage = '【开始】';
 const makeOpeningGreeting = (story, initVar) => `${story}\n\n<UpdateVariable>\n<initvar>\n${initVar}\n</initvar>\n</UpdateVariable>\n\n<StatusPlaceHolderImpl/>`;
 const trainingGroundGreeting = makeOpeningGreeting(
-  `暮色还未落下，王权山庄的演武场已经响起第三遍剑鸣。\n\n{{user}}站在场心，手中的长剑没有半分颤动。高台上的长老只谈命令、结果与下一场除妖，从没人问过这位被称作“王权富贵”的道门兵人愿不愿意。\n\n墙外忽然掠过一缕极细的银光，像蛛丝，又像某种来自远方的信号。那道银光一闪即逝，藏在暗处的视线却没有立刻离开。\n\n接下来，王权富贵如何回应命令、如何看待墙外的妖，都由{{user}}亲自决定。`,
+  `暮色还未落下，王权山庄的演武场已经响起第三遍剑鸣。\n\n{{user}}站在场心，手中的长剑没有半分颤动。高台上的长老只谈命令、结果与下一场除妖，从没人问过这位道门兵人愿不愿意。\n\n墙外忽然掠过一缕极细的银光，像蛛丝，又像某种来自远方的信号。那道银光一闪即逝，藏在暗处的视线却没有立刻离开。\n\n接下来，{{user}}如何回应命令、如何看待墙外的妖，都由{{user}}亲自决定。`,
   defaultInitVar,
 );
 const mainHallGreeting = makeOpeningGreeting(
-  `黄风城下那一剑已经过去数日。被仇恨红线操控的群妖恢复清明，金灵鳞骤得的力量消散，{{user}}最终顶着道盟众人的怒斥放走了它们。外界却只剩下一句越传越离谱的话——王权富贵为了一个女妖封剑叛道。\n\n夜色初临，王权山庄通往主殿的长廊点起一盏盏冷白灯火。一名守殿弟子匆匆停在{{user}}面前，垂首抱拳：“少爷，家主有令，请您即刻前往主殿，不得耽搁。”\n\n清瞳今晚没有如约出现。长廊尽头，主殿大门紧闭，门缝里的光把台阶切成一道森冷界线。隔着厚重殿门，父亲王权霸业的声音传来：“富贵，进来。”\n\n{{user}}此刻如何回应、是否立刻踏入主殿，都由{{user}}亲自决定。`,
+  `黄风城下那一剑已经过去数日。被仇恨红线操控的群妖恢复清明，金灵鳞骤得的力量消散，{{user}}最终顶着道盟众人的怒斥放走了它们。外界却只剩下一句越传越离谱的话——{{user}}为了一个女妖封剑叛道。\n\n夜色初临，王权山庄通往主殿的长廊点起一盏盏冷白灯火。一名守殿弟子匆匆停在{{user}}面前，垂首抱拳：“少爷，家主有令，请您即刻前往主殿，不得耽搁。”\n\n清瞳今晚没有如约出现。长廊尽头，主殿大门紧闭，门缝里的光把台阶切成一道森冷界线。隔着厚重殿门，父亲王权霸业的声音传来：“{{user}}，进来。”\n\n{{user}}此刻如何回应、是否立刻踏入主殿，都由{{user}}亲自决定。`,
   mainHallInitVar,
 );
-const description = '王权富贵与清瞳篇沉浸式互动测试卡。玩家以 {{user}} 扮演王权富贵；剧情参考轨道覆盖相识绘景、黄风城道义觉醒、斩断仇恨红线、一剑开天、主殿叛门、深山 12580 真相与龙湾前路，并允许玩家行动改变过程与关系。一剑开天后可在关系败露前主动执剑夺权或携瞳远走；携瞳远走包含离庄、追索、山外救援、12580 旧网、涂山边境审查与合作立足六段可变剧情，并可与红红、雅雅、容容、翠玉灵及毒娘子互动；12580 后可按信任与同行选择进入经典、关系修复或独立前路。清瞳五档关系条目限制演绎上限，不以数值自动确认恋人关系。“此去无归”提供八次拔剑与三路线抉择，并联动弹幕瀑布、《梦回还》和无尽剑幕试炼。';
-const creatorNotes = '测试卡 v1.50.0。常驻阶段大纲已压缩为全局铁律、17 阶段导航与分支边界；首夜送信、数日绘景、取名和长期秘密日常迁入按阶段动态读取的详案，其他主线关键细节保持不变。清瞳核心人设仍待作者填写。';
+const description = '{{user}}与清瞳篇沉浸式互动测试卡。{{user}} 就是玩家在本篇中的身份；剧情参考轨道覆盖相识绘景、黄风城道义觉醒、斩断仇恨红线、一剑开天、主殿叛门、深山 12580 真相与龙湾前路，并允许玩家行动改变过程与关系。一剑开天后可在关系败露前主动执剑夺权或携瞳远走；携瞳远走包含离庄、追索、山外救援、12580 旧网、涂山边境审查与合作立足六段可变剧情，并可与红红、雅雅、容容、翠玉灵及毒娘子互动；12580 后可按信任与同行选择进入经典、关系修复或独立前路。清瞳五档关系条目限制演绎上限，不以数值自动确认恋人关系。“此去无归”提供八次拔剑与三路线抉择，并联动弹幕瀑布、《梦回还》和无尽剑幕试炼。';
+const creatorNotes = '测试卡 v1.72.0。固定主角名已全部改为 {{user}}，正文、变量、世界书、开场与插图说明都会跟随玩家名称。';
 const now = new Date().toISOString();
 const characterBook = {
   entries: worldEntries.map(toCharacterBookEntry),
@@ -375,7 +466,10 @@ const extensions = {
   fav: false,
   world: worldName,
   depth_prompt: { prompt: '', depth: 4, role: 'system' },
-  regex_scripts: makeRegexScripts(openingSelectorHtml),
+  regex_scripts: makeRegexScripts(
+    openingSelectorHtml,
+    swordAwakeningImageDataUrl,
+  ),
   tavern_helper: {
     scripts: [openingInitController, loader, schema, mediaConfig, controller, statusbarController, bullethellController],
     variables: {},
@@ -391,9 +485,9 @@ const data = {
   creator_notes: creatorNotes,
   system_prompt: '',
   post_history_instructions: '',
-  tags: ['狐妖小红娘', '王权富贵', '清瞳', 'MVU', '沉浸式'],
+  tags: ['狐妖小红娘', '玩家主角', '清瞳', 'MVU', '沉浸式'],
   creator: '风宝',
-  character_version: '1.50.0',
+  character_version: '1.72.0',
   alternate_greetings: [trainingGroundGreeting, mainHallGreeting],
   extensions,
   character_book: characterBook,
@@ -427,10 +521,13 @@ await writeFile(targetWorld, `${JSON.stringify(worldbook, null, 2)}\n`, 'utf8');
 
 const installedCard = JSON.parse(parser.read(await readFile(targetCard)));
 const installedWorld = await readJson(targetWorld);
+const forbiddenFixedProtagonistName = ['王权', '富贵'].join('');
+assert(!JSON.stringify(installedCard).includes(forbiddenFixedProtagonistName), '安装后的角色卡仍包含固定主角名');
+assert(!JSON.stringify(installedWorld).includes(forbiddenFixedProtagonistName), '安装后的独立世界书仍包含固定主角名');
 assert(installedCard.spec === 'chara_card_v3', '安装后的角色卡不是 V3');
 assert(installedCard.data.name === cardName, '安装后的角色名不一致');
 assert(installedCard.data.extensions.world === worldName, '世界书绑定失败');
-assert(installedCard.data.character_book.entries.length === 39, '卡内世界书条目数量异常');
+assert(installedCard.data.character_book.entries.length === 42, '卡内世界书条目数量异常');
 assert(installedCard.data.character_book.entries[0].enabled === false, '卡内 [InitVar] 未禁用');
 assert(installedCard.data.first_mes === '【开始】' && installedCard.first_mes === '【开始】', '开局选择占位符未同步到 V3 双层字段');
 assert(installedCard.data.alternate_greetings.length === 2, '卡内两个正式开局缺失');
@@ -441,8 +538,28 @@ assert(installedCard.data.extensions.tavern_helper.scripts.length === 7, '卡内
 const installedScripts = installedCard.data.extensions.tavern_helper.scripts;
 assert(!installedScripts.some((script) => script.name.includes('地下城')), '卡内仍残留地下城脚本');
 assert(!installedScripts.some((script) => script.content.includes('hyxhn_wangquan_roguelite_requested')), '卡内仍残留肉鸽请求事件');
-assert(installedCard.data.extensions.regex_scripts.length === 6, '卡内正则数量异常');
+const installedMediaConfig = installedScripts.find((script) => script.name === '04-王权篇媒体资源配置');
+assert(installedMediaConfig?.content.includes('data:audio/mpeg;base64,'), '卡内媒体配置缺少内嵌《梦回还》');
+assert(!installedMediaConfig.content.includes('http://') && !installedMediaConfig.content.includes('https://'), '卡内媒体配置仍依赖外部音频地址');
+const installedBullethell = installedScripts.find((script) => script.name === '07-王权篇无尽剑幕试炼');
+assert(installedBullethell?.content.includes("version: '1.8.0'"), '卡内无尽剑幕运行时版本异常');
+assert(!installedBullethell.content.includes('HyxhnBullethellResult') && !installedBullethell.content.includes('setChatMessages('), '卡内无尽剑幕仍会写入游戏结果插图');
+assert(installedBullethell.content.includes('data:image/webp;base64,'), '卡内无尽剑幕缺少内嵌玩家角色图');
+assert(installedBullethell.content.includes('ctx.drawImage(sprite') && installedBullethell.content.includes('radius: 4'), '卡内无尽剑幕角色绘制或小判定点异常');
+assert(installedBullethell.content.includes('const bladeGradient = ctx.createLinearGradient') && installedBullethell.content.includes('ctx.moveTo(bladeBase.x, bladeBase.y)'), '卡内无尽剑幕缺少实体剑身或中央剑脊');
+assert(installedBullethell.content.includes('const tipShoulderLeft = point(radius * 2.45, radius * 0.68)') && installedBullethell.content.includes('ctx.lineTo(tipShoulderRight.x, tipShoulderRight.y)'), '卡内无尽剑幕缺少长方形剑身与独立剑尖结构');
+assert(!installedBullethell.content.includes('__HYXHN_BULLETHELL_PLAYER_SPRITE_DATA_URL__'), '卡内无尽剑幕仍残留玩家角色图占位符');
+assert(installedCard.data.extensions.regex_scripts.length === 10, '卡内正则数量异常');
 assert(installedCard.data.extensions.regex_scripts[0].replaceString.includes('hyxhn_opening_selected'), '开局选择页正则缺少按钮事件');
+const installedSwordDisplayRegex = installedCard.data.extensions.regex_scripts.find((regex) => regex.scriptName === '07-显示王权剑凝聚插图');
+const installedSwordPromptRegex = installedCard.data.extensions.regex_scripts.find((regex) => regex.scriptName === '08-对AI隐藏王权剑凝聚插图标记');
+assert(installedSwordDisplayRegex?.findRegex.includes('HyxhnWangquanSwordAwakening') && installedSwordDisplayRegex.replaceString.includes('data:image/webp;base64,') && installedSwordDisplayRegex.markdownOnly === true, '王权剑凝聚插图显示正则异常');
+const installedSwordImageMatch = installedSwordDisplayRegex.replaceString.match(/data:image\/webp;base64,([A-Za-z0-9+/=]+)/);
+assert(installedSwordImageMatch && Buffer.from(installedSwordImageMatch[1], 'base64').equals(swordAwakeningImage), '卡内王权剑凝聚插图与压缩资产不一致');
+assert(installedSwordDisplayRegex.replaceString.includes('width:min(100%,760px)') && installedSwordDisplayRegex.replaceString.includes('{{user}}凝聚王权剑守护清瞳'), '王权剑凝聚插图尺寸或替代文本异常');
+assert(installedSwordPromptRegex?.promptOnly === true && installedSwordPromptRegex.replaceString === '', '王权剑凝聚插图提示词隐藏正则异常');
+const legacyMarkerRegexes = installedCard.data.extensions.regex_scripts.filter((regex) => regex.findRegex.includes('HyxhnBullethellResult'));
+assert(legacyMarkerRegexes.length === 2 && legacyMarkerRegexes.every((regex) => regex.replaceString === ''), '旧小游戏结果图标记未在显示与提示词两路清理');
 assert(Object.keys(installedWorld.entries).every((key) => key === String(installedWorld.entries[key].uid)), '独立世界书键与 uid 不一致');
 
 console.log(`部署完成：${cardName}`);
